@@ -1,0 +1,122 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Preset xmlns="urn:schemas-nliteos-com:pn.v1">
+	<Date>09/24/2025 22:17</Date>
+	<AppInfo>
+		<Version>1.5.0.5855</Version>
+		<Licensed>Yes</Licensed>
+		<Protections>Yes</Protections>
+		<Host>Windows 10 Pro 64-bit - Client 10.0.26100.1 (en-US) - en-US</Host>
+	</AppInfo>
+	<ImageInfo>
+		<Version mode="offline">Windows 10 Enterprise 64-bit - Client 10.0.26100.1 (en-US)</Version>
+		<GUID>{693E3276-719F-45EE-9EF0-7EE6532D69DB}</GUID>
+	</ImageInfo>
+	<RemoveComponents>
+		<c>driver_wvmgid.inf</c>
+		<c>driver_wvmic.inf</c>
+		<c>driver_wvmic_ext.inf</c>
+		<c>driver_wvmic_guestinterface.inf</c>
+		<c>driver_wvmic_heartbeat.inf</c>
+		<c>driver_wvmic_kvpexchange.inf</c>
+		<c>driver_wvmic_shutdown.inf</c>
+		<c>driver_wvmic_timesync.inf</c>
+		<c>driver_wvmic_vss.inf</c>
+		<c>driver_xinputhid.inf</c>
+		<c>firstlogonanim 'Animacija kod prvog logiranja'</c>
+		<c>hwsupport_telephony 'Telefonija'</c>
+		<c>iis 'Internet Information Server (IIS)'</c>
+		<c>indeo 'Intel Indeo Codeci'</c>
+		<c>onedrive 'OneDrive (SkyDrive) - Desktop'</c>
+		<c>phonesvc 'Phone Service'</c>
+		<c>rasauto 'Remote Access Auto Connection Manager'</c>
+		<c>tempcache 'Cache i temp datoteke'</c>
+	</RemoveComponents>
+	<Compatibility protectHidden="true">
+		<ComponentFeatures>
+			<Feature enabled="yes">DefaultFonts</Feature>
+			<Feature enabled="no">Hyper-V</Feature>
+			<Feature enabled="no">OfficeSupport</Feature>
+			<Feature enabled="yes">NetworkDiscovery</Feature>
+			<Feature enabled="yes">OOBE</Feature>
+			<Feature enabled="yes">AppxSupport</Feature>
+			<Feature enabled="yes">Recommended-All</Feature>
+			<Feature enabled="yes">Printing</Feature>
+			<Feature enabled="yes">SamsungSwitch</Feature>
+			<Feature enabled="yes">Recommended-Tablet</Feature>
+			<Feature enabled="yes">USB</Feature>
+			<Feature enabled="yes">USBModem</Feature>
+			<Feature enabled="yes">VideoPlayback</Feature>
+			<Feature enabled="yes">VisualStudio</Feature>
+			<Feature enabled="yes">Activation</Feature>
+			<Feature enabled="yes">ActivationKMS</Feature>
+		</ComponentFeatures>
+		<MachineDrivers>
+			<Machine enabled="yes">Hyper-V VM</Machine>
+			<Machine enabled="yes">HostMachine</Machine>
+			<Machine enabled="yes">Parallels VM</Machine>
+			<Machine enabled="yes">Virtual Box VM</Machine>
+			<Machine enabled="yes">VMware VM</Machine>
+		</MachineDrivers>
+	</Compatibility>
+	<Features></Features>
+	<AddPackages></AddPackages>
+	<Drivers showHidden="true">
+		<AddDrivers></AddDrivers>
+	</Drivers>
+	<Unattended mode="0">
+		<OEMSetupComplete>false</OEMSetupComplete>
+		<AnswerFileLocationPanther>false</AnswerFileLocationPanther>
+		<AnswerFileLocationBoot>false</AnswerFileLocationBoot>
+		<SaveBothArch>false</SaveBothArch>
+		<settings pass="windowsPE">
+			<component name="Microsoft-Windows-Setup">
+				<DynamicUpdate>
+					<WillShowUI>OnError</WillShowUI>
+				</DynamicUpdate>
+				<ImageInstall>
+					<OSImage>
+						<WillShowUI>OnError</WillShowUI>
+						<InstallFrom>
+							<MetaData>
+								<Key>/IMAGE/NAME</Key>
+								<Value>Windows 11 Pro</Value>
+							</MetaData>
+						</InstallFrom>
+					</OSImage>
+				</ImageInstall>
+				<UserData>
+					<ProductKey>
+						<Key></Key>
+					</ProductKey>
+				</UserData>
+			</component>
+		</settings>
+	</Unattended>
+	<Tweaks>
+		<Settings></Settings>
+		<Services></Services>
+		<ExtraServices></ExtraServices>
+	</Tweaks>
+	<ApplyOptions>
+		<ImageTasks>
+			<Task>imageSaveTrim</Task>
+			<Task>imageFormatWim</Task>
+			<Task>imageOptionsDontBackupPresetLog</Task>
+		</ImageTasks>
+		<AutoIsoFile>NTLite.iso</AutoIsoFile>
+		<AutoIsoLabel>NTLite</AutoIsoLabel>
+		<AutoSplitSize>4000</AutoSplitSize>
+		<CleanHotfixedLeftovers>true</CleanHotfixedLeftovers>
+		<ReuseDriverCache>false</ReuseDriverCache>
+	</ApplyOptions>
+	<Execution>
+		<Add>
+			<Item type="Placeholder">
+				<Index>32</Index>
+			</Item>
+		</Add>
+		<Change></Change>
+		<Remove></Remove>
+	</Execution>
+	<Registry></Registry>
+</Preset>
