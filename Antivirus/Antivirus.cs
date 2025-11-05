@@ -117,7 +117,6 @@ public class AntivirusScanner
             string taskName = "AntivirusScannerStartup";
             string exePath = Process.GetCurrentProcess().MainModule.FileName;
 
-            // Delete existing task if it exists
             ProcessStartInfo deleteInfo = new ProcessStartInfo
             {
                 FileName = "schtasks.exe",
@@ -135,10 +134,8 @@ public class AntivirusScanner
                 {
                     Log(string.Format("Removed existing task: {0}", taskName));
                 }
-                // No else needed; /f forces deletion even if task doesn't exist
             }
 
-            // Create new task
             string xmlTask = string.Format(@"<?xml version=""1.0"" encoding=""UTF-16""?>
 <Task version=""1.2"" xmlns=""http://schemas.microsoft.com/windows/2004/02/mit/task"">
   <Triggers>
@@ -217,8 +214,7 @@ public class AntivirusScanner
     {
         try
         {
-            var files = Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories)
-                .Where(f => !f.StartsWith(QuarantinePath, StringComparison.OrdinalIgnoreCase));
+            var files = GetFilesSafely(directoryPath);
             Parallel.ForEach(files, new ParallelOptions { MaxDegreeOfParallelism = 2 }, async file =>
             {
                 await ScanFileAsync(file);
@@ -231,8 +227,29 @@ public class AntivirusScanner
         }
     }
 
+    private static IEnumerable<string> GetFilesSafely(string directoryPath)
+    {
+        var files = new List<string>();
+        try
+        {
+            files.AddRange(Directory.GetFiles(directoryPath));
+            foreach (var subDir in Directory.GetDirectories(directoryPath))
+            {
+                try
+                {
+                    files.AddRange(GetFilesSafely(subDir));
+                }
+                catch { } // Skip inaccessible subdirectories
+            }
+        }
+        catch { } // Skip inaccessible root directory
+        return files.Where(f => !f.StartsWith(QuarantinePath, StringComparison.OrdinalIgnoreCase));
+    }
+
     private static async Task ScanFileAsync(string filePath)
     {
+        if (filePath.Equals(LogPath, StringComparison.OrdinalIgnoreCase)) return; // Skip log file
+
         await Task.Run(async () =>
         {
             try
