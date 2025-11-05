@@ -12,11 +12,10 @@ using System.Diagnostics;
 using System.Security.Principal;
 using Microsoft.Win32;
 using System.Security.AccessControl;
-using System.Runtime.InteropServices; // Added for hiding console
+using System.Runtime.InteropServices;
 
 public class AntivirusScanner
 {
-    // Added: For hiding console window
     [DllImport("kernel32.dll")]
     static extern IntPtr GetConsoleWindow();
 
@@ -32,10 +31,8 @@ public class AntivirusScanner
     private static readonly SemaphoreSlim apiSemaphore = new SemaphoreSlim(1, 1);
     private static readonly TimeSpan BehaviorCheckInterval = TimeSpan.FromSeconds(30);
 
-    // Main entry point (unchanged, but now hides console)
     public static void Main(string[] args)
     {
-        // Hide console window immediately for invisibility
         var handle = GetConsoleWindow();
         ShowWindow(handle, SW_HIDE);
 
@@ -47,21 +44,17 @@ public class AntivirusScanner
     {
         try
         {
-            // Ensure admin privileges (this will be handled by manifest UAC prompt)
             if (!new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
             {
                 Log("Error: This program requires administrative privileges.");
                 return;
             }
 
-            // Added: Add to startup if not already present
             AddToStartup();
 
-            // Create quarantine directory
             if (!Directory.Exists(QuarantinePath))
                 Directory.CreateDirectory(QuarantinePath);
 
-            // Rest of the method unchanged...
             foreach (var drive in DriveInfo.GetDrives().Where(d => d.DriveType == DriveType.Fixed && d.IsReady))
             {
                 try
@@ -87,18 +80,15 @@ public class AntivirusScanner
 
             Log("Real-time system monitoring started with CIRCL Hashlookup. Press Ctrl+C to stop in non-silent mode.");
 
-            // Initial scan of all drives
             Log("Performing initial drive scan...");
             foreach (var drive in DriveInfo.GetDrives().Where(d => d.DriveType == DriveType.Fixed && d.IsReady))
             {
                 ScanDirectory(drive.Name);
             }
 
-            // Start background tasks for process and persistence monitoring
             var processTask = Task.Run(() => MonitorProcessesAsync());
             var persistenceTask = Task.Run(() => MonitorPersistenceAsync());
 
-            // Handle graceful shutdown (simplified for invisible mode; no Ctrl+C visible, but it works if needed)
             if (!silent)
             {
                 Console.CancelKeyPress += (s, e) =>
@@ -112,7 +102,6 @@ public class AntivirusScanner
                 };
             }
 
-            // Keep running
             await Task.WhenAll(processTask, persistenceTask);
         }
         catch (Exception ex)
@@ -122,35 +111,35 @@ public class AntivirusScanner
     }
 
     private static void AddToStartup()
-{
-    try
     {
-        string taskName = "AntivirusScannerStartup";
-        string exePath = Process.GetCurrentProcess().MainModule.FileName;
-
-        // Check if task already exists
-        ProcessStartInfo startInfo = new ProcessStartInfo
+        try
         {
-            FileName = "schtasks.exe",
-            Arguments = string.Format("/query /tn \"{0}\"", taskName),
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+            string taskName = "AntivirusScannerStartup";
+            string exePath = Process.GetCurrentProcess().MainModule.FileName;
 
-        using (Process process = Process.Start(startInfo))
-        {
-            process.WaitForExit();
-            if (process.ExitCode == 0)
+            // Delete existing task if it exists
+            ProcessStartInfo deleteInfo = new ProcessStartInfo
             {
-                Log(string.Format("Task already exists: {0}", taskName));
-                return;
-            }
-        }
+                FileName = "schtasks.exe",
+                Arguments = string.Format("/delete /tn \"{0}\" /f", taskName),
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
 
-        // Create task
-        string xmlTask = string.Format(@"<?xml version=""1.0"" encoding=""UTF-16""?>
+            using (Process deleteProcess = Process.Start(deleteInfo))
+            {
+                deleteProcess.WaitForExit();
+                if (deleteProcess.ExitCode == 0)
+                {
+                    Log(string.Format("Removed existing task: {0}", taskName));
+                }
+                // No else needed; /f forces deletion even if task doesn't exist
+            }
+
+            // Create new task
+            string xmlTask = string.Format(@"<?xml version=""1.0"" encoding=""UTF-16""?>
 <Task version=""1.2"" xmlns=""http://schemas.microsoft.com/windows/2004/02/mit/task"">
   <Triggers>
     <LogonTrigger>
@@ -158,7 +147,7 @@ public class AntivirusScanner
     </LogonTrigger>
   </Triggers>
   <Principals>
-    <Principal id=""Gorstak"">
+    <Principal id=""Author"">
       <RunLevel>HighestAvailable</RunLevel>
     </Principal>
   </Principals>
@@ -181,7 +170,7 @@ public class AntivirusScanner
     <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
     <Priority>7</Priority>
   </Settings>
-  <Actions Context=""Gorstak"">
+  <Actions Context=""Author"">
     <Exec>
       <Command>""{0}""</Command>
       <Arguments>silent</Arguments>
@@ -189,31 +178,40 @@ public class AntivirusScanner
   </Actions>
 </Task>", exePath);
 
-        string tempXmlPath = Path.Combine(Path.GetTempPath(), "AntivirusTask.xml");
-        File.WriteAllText(tempXmlPath, xmlTask);
+            string tempXmlPath = Path.Combine(Path.GetTempPath(), "AntivirusTask.xml");
+            File.WriteAllText(tempXmlPath, xmlTask);
 
-        startInfo.Arguments = string.Format("/create /tn \"{0}\" /xml \"{1}\"", taskName, tempXmlPath);
-        using (Process process = Process.Start(startInfo))
-        {
-            process.WaitForExit();
-            if (process.ExitCode == 0)
+            ProcessStartInfo createInfo = new ProcessStartInfo
             {
-                Log(string.Format("Added to Task Scheduler: {0}", taskName));
-            }
-            else
+                FileName = "schtasks.exe",
+                Arguments = string.Format("/create /tn \"{0}\" /xml \"{1}\"", taskName, tempXmlPath),
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using (Process createProcess = Process.Start(createInfo))
             {
-                string error = process.StandardError.ReadToEnd();
-                Log(string.Format("Failed to add to Task Scheduler: {0}", error));
+                createProcess.WaitForExit();
+                if (createProcess.ExitCode == 0)
+                {
+                    Log(string.Format("Added to Task Scheduler: {0}", taskName));
+                }
+                else
+                {
+                    string error = createProcess.StandardError.ReadToEnd();
+                    Log(string.Format("Failed to add to Task Scheduler: {0}", error));
+                }
             }
+
+            File.Delete(tempXmlPath);
         }
-
-        File.Delete(tempXmlPath);
+        catch (Exception ex)
+        {
+            Log(string.Format("Failed to add to Task Scheduler: {0}", ex.Message));
+        }
     }
-    catch (Exception ex)
-    {
-        Log(string.Format("Failed to add to Task Scheduler: {0}", ex.Message));
-    }
-}
 
     private static void ScanDirectory(string directoryPath)
     {
@@ -225,7 +223,7 @@ public class AntivirusScanner
             {
                 await ScanFileAsync(file);
             });
-            Log(string.Format("Initial scan completed for {0}.", directoryPath));
+            Log(string.Format("Initial scan completed for {0}", directoryPath));
         }
         catch (Exception ex)
         {
@@ -295,7 +293,6 @@ public class AntivirusScanner
                             HandleMalware(exePath, threatName, process);
                         }
 
-                        // Advanced: Check for suspicious behavior
                         if (IsSuspiciousProcess(process))
                         {
                             Log(string.Format("Suspicious behavior detected in process: {0} (PID: {1})", process.ProcessName, process.Id));
@@ -364,11 +361,9 @@ public class AntivirusScanner
     {
         try
         {
-            // Check CPU usage and memory
             if (process.TotalProcessorTime.TotalSeconds > 60 && process.WorkingSet64 > 500 * 1024 * 1024)
                 return true;
 
-            // Check for unsigned executable
             var fileInfo = FileVersionInfo.GetVersionInfo(process.MainModule != null ? process.MainModule.FileName : "");
             if (string.IsNullOrEmpty(fileInfo.CompanyName) || fileInfo.CompanyName == "Unknown")
                 return true;
@@ -383,7 +378,6 @@ public class AntivirusScanner
 
     private static void HandleMalware(string filePath, string threatName, Process process = null)
     {
-        // Kill process if provided
         if (process != null)
         {
             try
@@ -400,7 +394,6 @@ public class AntivirusScanner
             }
         }
 
-        // Quarantine file
         try
         {
             string fileName = Path.GetFileName(filePath);
@@ -408,7 +401,6 @@ public class AntivirusScanner
             File.Move(filePath, quarantineFile);
             Log(string.Format("Quarantined: {0} to {1}", filePath, quarantineFile));
 
-            // Block file execution
             try
             {
                 var acl = File.GetAccessControl(quarantineFile);
