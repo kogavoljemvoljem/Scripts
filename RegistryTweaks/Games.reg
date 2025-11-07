@@ -1,13 +1,13 @@
 Windows Registry Editor Version 5.00
 
-; System-Wide Hardware Acceleration Disable
+; System-Wide Hardware Acceleration Disable (Applies to All GPUs)
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows]
 "DisableHWAcceleration"=dword:00000001
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicsDrivers]
 "HwAcceleration"=dword:00000000
 
-; NVIDIA App Profiles: Disable Hardware Acceleration for Non-Gaming Apps
+; NVIDIA App Profiles: Disable for Non-Gaming
 [HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Discord.exe]
 "Enable3DAcceleration"=dword:00000000
 "PowerMizerLevel"=dword:00000003
@@ -28,23 +28,18 @@ Windows Registry Editor Version 5.00
 "Enable3DAcceleration"=dword:00000000
 "PowerMizerLevel"=dword:00000003
 
-; NVIDIA Game Profiles: Enable Hardware Acceleration
+; NVIDIA Game Profiles: Enable for Popular Games (Steam/Epic/GOG/Ubisoft/Origin)
 [HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\FortniteClient-Win64-Shipping.exe]
 "Enable3DAcceleration"=dword:00000001
 "PowerMizerLevel"=dword:00000001
 "LowLatencyMode"=dword:00000001
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\csgo.exe]
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\cs2.exe]
 "Enable3DAcceleration"=dword:00000001
 "PowerMizerLevel"=dword:00000001
 "LowLatencyMode"=dword:00000001
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\ApexLegends.exe]
-"Enable3DAcceleration"=dword:00000001
-"PowerMizerLevel"=dword:00000001
-"LowLatencyMode"=dword:00000001
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\COD.exe]
 "Enable3DAcceleration"=dword:00000001
 "PowerMizerLevel"=dword:00000001
 "LowLatencyMode"=dword:00000001
@@ -64,22 +59,7 @@ Windows Registry Editor Version 5.00
 "PowerMizerLevel"=dword:00000001
 "LowLatencyMode"=dword:00000001
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Warframe.x64.exe]
-"Enable3DAcceleration"=dword:00000001
-"PowerMizerLevel"=dword:00000001
-"LowLatencyMode"=dword:00000001
-
 [HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Overwatch.exe]
-"Enable3DAcceleration"=dword:00000001
-"PowerMizerLevel"=dword:00000001
-"LowLatencyMode"=dword:00000001
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Destiny2.exe]
-"Enable3DAcceleration"=dword:00000001
-"PowerMizerLevel"=dword:00000001
-"LowLatencyMode"=dword:00000001
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\RocketLeague.exe]
 "Enable3DAcceleration"=dword:00000001
 "PowerMizerLevel"=dword:00000001
 "LowLatencyMode"=dword:00000001
@@ -99,7 +79,7 @@ Windows Registry Editor Version 5.00
 "PowerMizerLevel"=dword:00000001
 "LowLatencyMode"=dword:00000001
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Witcher3.exe]
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\witcher3.exe]
 "Enable3DAcceleration"=dword:00000001
 "PowerMizerLevel"=dword:00000001
 "LowLatencyMode"=dword:00000001
@@ -109,22 +89,12 @@ Windows Registry Editor Version 5.00
 "PowerMizerLevel"=dword:00000001
 "LowLatencyMode"=dword:00000001
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\RainbowSix.exe]
-"Enable3DAcceleration"=dword:00000001
-"PowerMizerLevel"=dword:00000001
-"LowLatencyMode"=dword:00000001
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Battlefield2042.exe]
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\RainbowSixSiege.exe]
 "Enable3DAcceleration"=dword:00000001
 "PowerMizerLevel"=dword:00000001
 "LowLatencyMode"=dword:00000001
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\DOOM.exe]
-"Enable3DAcceleration"=dword:00000001
-"PowerMizerLevel"=dword:00000001
-"LowLatencyMode"=dword:00000001
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\HaloInfinite.exe]
 "Enable3DAcceleration"=dword:00000001
 "PowerMizerLevel"=dword:00000001
 "LowLatencyMode"=dword:00000001
@@ -139,17 +109,7 @@ Windows Registry Editor Version 5.00
 "PowerMizerLevel"=dword:00000001
 "LowLatencyMode"=dword:00000001
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\MonsterHunterWorld.exe]
-"Enable3DAcceleration"=dword:00000001
-"PowerMizerLevel"=dword:00000001
-"LowLatencyMode"=dword:00000001
-
 [HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Borderlands3.exe]
-"Enable3DAcceleration"=dword:00000001
-"PowerMizerLevel"=dword:00000001
-"LowLatencyMode"=dword:00000001
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Starfield.exe]
 "Enable3DAcceleration"=dword:00000001
 "PowerMizerLevel"=dword:00000001
 "LowLatencyMode"=dword:00000001
@@ -178,3 +138,447 @@ Windows Registry Editor Version 5.00
 "Enable3DAcceleration"=dword:00000001
 "PowerMizerLevel"=dword:00000001
 "LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\BaldursGate3.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\StardewValley.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Helldivers2.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\MonsterHunterWilds.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\ClairObscurExpedition33.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\SouthOfMidnight.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\BluePrince.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\AssassinsCreedShadows.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\FarCry7.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Battlefield2042.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\TheDivision2.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\WatchDogsLegion.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Anno1800.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\TheCrewMotorfest.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\FIFA25.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\TheSims4.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Hades.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\VampireSurvivors.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Balatro.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\FieldsOfMistria.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+; AMD Global Enable for Games + Per-Game Subkeys (Under UMD for Profiles)
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD]
+"3D_Acceleration"="1"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\FortniteClient-Win64-Shipping.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\cs2.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\ApexLegends.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\Valorant-Win64-Shipping.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\Cyberpunk2077.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\GTA5.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\Overwatch.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\ELDENRING.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\SkyrimSE.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\Fallout4.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\witcher3.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\AmongUs.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\RainbowSixSiege.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\DOOM.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\RedDeadRedemption2.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\GodOfWar.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\Borderlands3.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\DiabloIV.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\GenshinImpact.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\HogwartsLegacy.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\Palworld.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\ArkSurvivalAscended.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\BaldursGate3.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\StardewValley.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\Helldivers2.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\MonsterHunterWilds.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\ClairObscurExpedition33.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\SouthOfMidnight.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\BluePrince.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\AssassinsCreedShadows.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\FarCry7.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\Battlefield2042.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\TheDivision2.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\WatchDogsLegion.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\Anno1800.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\TheCrewMotorfest.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\FIFA25.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\TheSims4.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\Hades.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\VampireSurvivors.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\Balatro.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000\UMD\FieldsOfMistria.exe]
+"3D_Acceleration"="1"
+"PowerProfile"="High"
+
+; Intel Global Enable + Per-Game Profiles (Under GMM for Profiles)
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles]
+"EnableHwAcceleration"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\FortniteClient-Win64-Shipping.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\cs2.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\ApexLegends.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\Valorant-Win64-Shipping.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\Cyberpunk2077.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\GTA5.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\Overwatch.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\ELDENRING.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\SkyrimSE.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\Fallout4.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\witcher3.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\AmongUs.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\RainbowSixSiege.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\DOOM.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\RedDeadRedemption2.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\GodOfWar.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\Borderlands3.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\DiabloIV.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\GenshinImpact.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\HogwartsLegacy.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\Palworld.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\ArkSurvivalAscended.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\BaldursGate3.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\StardewValley.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\Helldivers2.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\MonsterHunterWilds.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\ClairObscurExpedition33.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\SouthOfMidnight.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\BluePrince.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\AssassinsCreedShadows.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\FarCry7.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\Battlefield2042.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\TheDivision2.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\WatchDogsLegion.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\Anno1800.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\TheCrewMotorfest.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\FIFA25.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\TheSims4.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\Hades.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\VampireSurvivors.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\Balatro.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Intel\GMM\Profiles\FieldsOfMistria.exe]
+"EnableHwAcceleration"=dword:00000001
+"PowerPlan"="Performance"
