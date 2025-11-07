@@ -1,0 +1,180 @@
+Windows Registry Editor Version 5.00
+
+; System-Wide Hardware Acceleration Disable
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows]
+"DisableHWAcceleration"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicsDrivers]
+"HwAcceleration"=dword:00000000
+
+; NVIDIA App Profiles: Disable Hardware Acceleration for Non-Gaming Apps
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Discord.exe]
+"Enable3DAcceleration"=dword:00000000
+"PowerMizerLevel"=dword:00000003
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\chrome.exe]
+"Enable3DAcceleration"=dword:00000000
+"PowerMizerLevel"=dword:00000003
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\msedge.exe]
+"Enable3DAcceleration"=dword:00000000
+"PowerMizerLevel"=dword:00000003
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\firefox.exe]
+"Enable3DAcceleration"=dword:00000000
+"PowerMizerLevel"=dword:00000003
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\X.exe]
+"Enable3DAcceleration"=dword:00000000
+"PowerMizerLevel"=dword:00000003
+
+; NVIDIA Game Profiles: Enable Hardware Acceleration
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\FortniteClient-Win64-Shipping.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\csgo.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\ApexLegends.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\COD.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Valorant-Win64-Shipping.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Cyberpunk2077.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\GTA5.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Warframe.x64.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Overwatch.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Destiny2.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\RocketLeague.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\ELDENRING.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\SkyrimSE.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Fallout4.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Witcher3.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\AmongUs.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\RainbowSix.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Battlefield2042.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\DOOM.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\HaloInfinite.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\RedDeadRedemption2.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\GodOfWar.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\MonsterHunterWorld.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Borderlands3.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Starfield.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\DiabloIV.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\GenshinImpact.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\HogwartsLegacy.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\Palworld.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global\NvTweak\Profiles\ArkSurvivalAscended.exe]
+"Enable3DAcceleration"=dword:00000001
+"PowerMizerLevel"=dword:00000001
+"LowLatencyMode"=dword:00000001
