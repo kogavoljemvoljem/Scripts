@@ -1,484 +1,1340 @@
-﻿# Antivirus.ps1
-# Author: Gorstak
+# Antivirus.ps1 by Gorstak
 
-# Ensure script runs as admin
-$currentUser = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-if (-not $currentUser.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "Relaunching as Administrator..."
-    Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
-    exit
+function Register-SystemLogonScript {
+    param (
+        [string]$TaskName = "RunAntivirusAtLogon"
+    )
+
+    # Define paths
+    $scriptSource = $MyInvocation.MyCommand.Path
+    if (-not $scriptSource) {
+        # Fallback to determine script path
+        $scriptSource = $PSCommandPath
+        if (-not $scriptSource) {
+            Write-Output "Error: Could not determine script path."
+            return
+        }
+    }
+
+    $targetFolder = "C:\Windows\Setup\Scripts\Bin"
+    $targetPath = Join-Path $targetFolder (Split-Path $scriptSource -Leaf)
+
+    # Create required folders
+    if (-not (Test-Path $targetFolder)) {
+        New-Item -Path $targetFolder -ItemType Directory -Force | Out-Null
+        Write-Output "Created folder: $targetFolder"
+    }
+
+    # Copy the script
+    try {
+        Copy-Item -Path $scriptSource -Destination $targetPath -Force -ErrorAction Stop
+        Write-Output "Copied script to: $targetPath"
+    } catch {
+        Write-Output "Failed to copy script: $_"
+        return
+    }
+
+    # Define the scheduled task action and trigger
+    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"$targetPath`""
+    $trigger = New-ScheduledTaskTrigger -AtLogOn
+    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+
+    # Register the task
+    try {
+        Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+        Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal
+        Write-Output "Scheduled task '$TaskName' created to run at user logon under SYSTEM."
+    } catch {
+        Write-Output "Failed to register task: $_"
+    }
 }
 
-# Function to silently install Newtonsoft.Json
-function Install-NewtonsoftJson {
-    $libPath = "C:\ProgramData\AntivirusLibs"
-    $dllPath = "$libPath\Newtonsoft.Json.dll"
-    if (Test-Path $dllPath) {
-        return $dllPath
+# Run the function
+Register-SystemLogonScript
+
+$ErrorActionPreference = 'SilentlyContinue'
+
+# Define paths
+$programData = [Environment]::GetFolderPath("CommonApplicationData")
+$baseDir = Join-Path $programData "Antivirus"
+$scriptDir = Join-Path $baseDir "Bin"
+$scriptPath = Join-Path $scriptDir "Antivirus.ps1"
+$quarantineFolder = Join-Path $baseDir "Quarantine"
+$backupFolder = Join-Path $baseDir "Backup"
+$logFile = Join-Path $baseDir "antivirus_log.txt"
+$localDatabase = Join-Path $baseDir "scanned_files.txt"
+$configFile = Join-Path $baseDir "config.json"
+$lockFile = Join-Path $baseDir "antivirus.lock"
+$virusTotalApiKey = "bb66071b32ed9b7d1f79f704e2772a2ce4d857e7cc0564ebabe41828def4f57b"
+$scannedFiles = @{}
+$maxRetries = 3
+$retryDelaySeconds = 15 # Increased to manage API rate limits
+$maxConcurrentScans = 4 # VirusTotal free API limit: 4 requests/minute
+$eventQueue = New-Object 'System.Collections.Queue'
+$maxQueueSize = 100
+$maxFileSizeMB = 32 # VirusTotal free API upload limit: 32 MB
+
+# Whitelist for system-critical files, browser DLLs, gaming apps, and problematic directories
+$whitelistPatterns = @(
+    "*\Antivirus\Bin\Antivirus.ps1*",
+    "*\Antivirus\Quarantine\*",
+    "*\Windows\System32\*",
+    "*\Windows\SysWOW64\*",
+    "*\Windows\WinSxS\*",
+    "*\Program Files\Windows Defender\*",
+    "*\Google\Chrome\Application\*",
+    "*\Mozilla Firefox\*",
+    "*\Microsoft\Edge\Application\*",
+    "*\Opera\*",
+    "*\Steam\*",
+    "*\Epic Games\*",
+    "*\Origin\*",
+    "*\Ubisoft\*",
+    "*\Battle.net\*",
+    "*\Users\Admin\AppData\Local\Temp\*",
+    "*\Users\Admin\AppData\Local\Microsoft\Windows\ActionCenterCache\*"
+)
+
+# Configuration defaults
+$configDefaults = @{
+    MaxFilesPerDrive = 100
+    ScanIntervalSeconds = 3600
+    MaxLogSizeMB = 10
+}
+
+# Ensure directories exist
+foreach ($dir in @($baseDir, $scriptDir, $quarantineFolder, $backupFolder)) {
+    if (-not (Test-Path $dir)) {
+        New-Item -Path $dir -ItemType Directory -Force | Out-Null
     }
+}
 
+# Check for lock file to prevent multiple instances
+if (Test-Path $lockFile) {
+    $lockContent = Get-Content $lockFile -ErrorAction SilentlyContinue
+    if ($lockContent -and (Get-Process -Id $lockContent -ErrorAction SilentlyContinue)) {
+        Write-Host "Another instance of the antivirus script is already running (PID: $lockContent). Exiting."
+        exit
+    } else {
+        Remove-Item $lockFile -Force -ErrorAction SilentlyContinue
+    }
+}
+# Create lock file with current process ID
+$pid = [System.Diagnostics.Process]::GetCurrentProcess().Id
+Set-Content -Path $lockFile -Value $pid -Force
+Write-Log "Created lock file with PID: $pid"
+
+# Save or load configuration
+if (-not (Test-Path $configFile)) {
+    $configDefaults | ConvertTo-Json | Set-Content $configFile
+}
+$config = Get-Content $configFile -Raw | ConvertFrom-Json
+
+# Logging Function with Rotation
+function Write-Log {
+    param ([string]$Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logEntry = "[$timestamp] $Message"
+    Write-Host $logEntry
     try {
-        Write-Host "Installing Newtonsoft.Json..."
-        if (-not (Test-Path $libPath)) {
-            New-Item -ItemType Directory -Path $libPath -Force | Out-Null
+        if ((Test-Path $logFile) -and ((Get-Item $logFile -ErrorAction SilentlyContinue).Length -ge ($config.MaxLogSizeMB * 1MB))) {
+            $archiveName = Join-Path $baseDir "antivirus_log_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+            Rename-Item -Path $logFile -NewName $archiveName -ErrorAction SilentlyContinue
+            Write-Host "Rotated log to $archiveName"
         }
+        Add-Content -Path $logFile -Value $logEntry -ErrorAction Stop
+    } catch {
+        Write-Host ("Failed to write to log: {0}" -f $_.Exception.Message)
+    }
+}
 
-        $nugetUrl = "https://www.nuget.org/api/v2/package/Newtonsoft.Json"
-        $nupkgPath = "$libPath\Newtonsoft.Json.nupkg"
-        $client = New-Object System.Net.WebClient
-        $client.DownloadFile($nugetUrl, $nupkgPath)
+# Copy script if needed
+if (-not (Test-Path $scriptPath)) {
+    Copy-Item -Path $MyInvocation.MyCommand.Path -Destination $scriptPath -Force
+    Write-Log "Copied script to: $scriptPath"
+}
 
-        # Extract DLL from .nupkg (it's a ZIP)
-        Add-Type -AssemblyName System.IO.Compression.FileSystem
-        $zip = [System.IO.Compression.ZipFile]::OpenRead($nupkgPath)
-        $entry = $zip.Entries | Where-Object { $_.FullName -like "lib/net45/Newtonsoft.Json.dll" }
-        if ($entry) {
-            [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $dllPath, $true)
+# Load Scanned Files Database
+if (Test-Path $localDatabase) {
+    $lines = Get-Content $localDatabase -ErrorAction SilentlyContinue
+    foreach ($line in $lines) {
+        if ($line -match "^([0-9a-f]{64}),(true|false)$") {
+            $scannedFiles[$matches[1]] = [bool]$matches[2]
         }
-        $zip.Dispose()
-        Remove-Item $nupkgPath -Force
+    }
+    Write-Log "Loaded $($scannedFiles.Count) scanned file entries from database."
+}
 
-        if (Test-Path $dllPath) {
-            Write-Host "Newtonsoft.Json installed successfully."
-            return $dllPath
-        }
-        else {
-            Write-Host "Failed to extract Newtonsoft.Json.dll."
+function Calculate-FileHash {
+    param ([string]$filePath)
+    try {
+        if (-not (Test-Path $filePath -PathType Leaf)) {
+            Write-Log "Skipping ${filePath}: Not a valid file."
             return $null
         }
-    }
-    catch {
-        Write-Host "Failed to install Newtonsoft.Json: $_"
+        $fileInfo = Get-Item $filePath -ErrorAction Stop
+        if ($fileInfo.Length -eq 0) {
+            Write-Log "Skipping ${filePath}: Zero-byte file."
+            return $null
+        }
+        if ($fileInfo.Length -gt ($maxFileSizeMB * 1MB)) {
+            Write-Log "Skipping ${filePath}: File size exceeds $maxFileSizeMB MB."
+            return $null
+        }
+        $hash = Get-FileHash -Path $filePath -Algorithm SHA256 -ErrorAction Stop
+        return $hash.Hash.ToLower()
+    } catch {
+        Write-Log ("Error hashing ${filePath}: {0}" -f $_.Exception.Message)
         return $null
     }
 }
 
-# Install Newtonsoft.Json
-$jsonAssembly = Install-NewtonsoftJson
-if (-not $jsonAssembly) {
-    Write-Host "Error: Could not install Newtonsoft.Json. Script cannot proceed."
-    exit
+function Upload-FileToVirusTotal {
+    param ([string]$filePath, [string]$fileHash)
+    try {
+        $fileInfo = Get-Item $filePath -ErrorAction Stop
+        if ($fileInfo.Length -gt ($maxFileSizeMB * 1MB)) {
+            Write-Log "Cannot upload ${filePath}: File size exceeds $maxFileSizeMB MB."
+            return $false
+        }
+        $url = "https://www.virustotal.com/api/v3/files"
+        $headers = @{ "x-apikey" = $virusTotalApiKey }
+        
+        # Create a multipart form-data request
+        $boundary = [System.Guid]::NewGuid().ToString()
+        $contentType = "multipart/form-data; boundary=$boundary"
+        $fileBytes = [System.IO.File]::ReadAllBytes($filePath)
+        $fileName = [System.IO.Path]::GetFileName($filePath)
+        
+        # Construct the multipart form-data body
+        $bodyLines = @(
+            "--$boundary",
+            "Content-Disposition: form-data; name=`"file`"; filename=`"$fileName`"",
+            "Content-Type: application/octet-stream",
+            "",
+            [System.Text.Encoding]::UTF8.GetString($fileBytes),
+            "--$boundary--"
+        )
+        $body = $bodyLines -join "`r`n"
+
+        Write-Log "Uploading file ${filePath} to VirusTotal."
+        $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Post -ContentType $contentType -Body $body -ErrorAction Stop
+        $analysisId = $response.data.id
+        Write-Log "File ${filePath} uploaded. Analysis ID: $analysisId"
+        
+        $analysisUrl = "https://www.virustotal.com/api/v3/analyses/$analysisId"
+        for ($i = 0; $i -lt $maxRetries; $i++) {
+            Start-Sleep -Seconds $retryDelaySeconds
+            try {
+                $analysisResponse = Invoke-RestMethod -Uri $analysisUrl -Headers $headers -Method Get -ErrorAction Stop
+                if ($analysisResponse.data.attributes.status -eq "completed") {
+                    $maliciousCount = $analysisResponse.data.attributes.stats.malicious
+                    Write-Log "VirusTotal analysis for ${fileHash}: $maliciousCount malicious detections."
+                    return $maliciousCount -gt 3
+                }
+            } catch {
+                Write-Log ("Error checking analysis status for ${fileHash}: {0}" -f $_.Exception.Message)
+            }
+        }
+        Write-Log "Analysis for ${fileHash} did not complete in time."
+        return $false
+    } catch {
+        Write-Log ("Failed to upload ${filePath}: {0}" -f $_.Exception.Message)
+        return $false
+    }
 }
 
-$sourceCode = @"
-using System;
-using System.IO;
-using System.Security.Cryptography;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
-using System.Threading;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System.Diagnostics;
-using System.Security.Principal;
-using Microsoft.Win32;
-using System.Security.AccessControl;
-
-public class AntivirusScanner
-{
-    private static readonly string QuarantinePath = @"C:\Quarantine";
-    private static readonly string LogPath = @"C:\ProgramData\AntivirusLog.txt";
-    private static readonly HttpClient httpClient = new HttpClient();
-    private static readonly string CirclBaseUrl = "https://hashlookup.circl.lu";
-    private static readonly List<FileSystemWatcher> watchers = new List<FileSystemWatcher>();
-    private static readonly SemaphoreSlim apiSemaphore = new SemaphoreSlim(1, 1);
-    private static readonly TimeSpan BehaviorCheckInterval = TimeSpan.FromSeconds(30);
-
-    public static async Task StartSystemMonitoring(bool silent = false)
-    {
-        try
-        {
-            // Ensure admin privileges
-            if (!new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
-            {
-                Log("Error: This program requires administrative privileges.");
-                return;
+function Scan-FileWithVirusTotal {
+    param ([string]$fileHash, [string]$filePath)
+    for ($i = 0; $i -lt $maxRetries; $i++) {
+        try {
+            $url = "https://www.virustotal.com/api/v3/files/$fileHash"
+            $headers = @{ "x-apikey" = $virusTotalApiKey }
+            $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Get -TimeoutSec 30
+            if ($response.data.attributes) {
+                $maliciousCount = $response.data.attributes.last_analysis_stats.malicious
+                Write-Log "VirusTotal result for ${fileHash}: $maliciousCount malicious detections."
+                return $maliciousCount -gt 3
             }
+        } catch {
+            if ($_.Exception.Response.StatusCode -eq 404) {
+                Write-Log "File hash ${fileHash} not found in VirusTotal database. Attempting to upload."
+                return Upload-FileToVirusTotal -filePath $filePath -fileHash $fileHash
+            }
+            Write-Log ("Error scanning ${fileHash}: {0}" -f $_.Exception.Message)
+            if ($i -lt ($maxRetries - 1)) {
+                Start-Sleep -Seconds $retryDelaySeconds
+                continue
+            }
+        }
+    }
+    return $false
+}
 
-            // Create quarantine directory
-            if (!Directory.Exists(QuarantinePath))
-                Directory.CreateDirectory(QuarantinePath);
-
-            // Set up FileSystemWatchers for all fixed drives
-            foreach (var drive in DriveInfo.GetDrives().Where(d => d.DriveType == DriveType.Fixed && d.IsReady))
-            {
-                try
-                {
-                    var watcher = new FileSystemWatcher
-                    {
-                        Path = drive.Name,
-                        IncludeSubdirectories = true,
-                        Filter = "*.*",
-                        NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite
-                    };
-                    watcher.Changed += async (s, e) => await ScanFileAsync(e.FullPath);
-                    watcher.Created += async (s, e) => await ScanFileAsync(e.FullPath);
-                    watcher.EnableRaisingEvents = true;
-                    watchers.Add(watcher);
-                    Log(string.Format("Monitoring drive: {0}", drive.Name));
+function Start-FileSystemWatcher {
+    $drives = Get-CimInstance -ClassName Win32_LogicalDisk | Where-Object { $_.DriveType -in (2, 3, 4) }
+    $watchers = @()
+    foreach ($drive in $drives) {
+        $root = $drive.DeviceID + "\"
+        Write-Log "Setting up FileSystemWatcher for drive: $root"
+        try {
+            $watcher = New-Object System.IO.FileSystemWatcher
+            $watcher.Path = $root
+            $watcher.IncludeSubdirectories = $true
+            $watcher.EnableRaisingEvents = $true
+            $watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor [System.IO.NotifyFilters]::LastWrite
+            $action = {
+                param ($source, $event)
+                $filePath = $event.FullPath
+                if ($eventQueue.Count -ge $maxQueueSize) {
+                    $eventQueue.Dequeue() | Out-Null
                 }
-                catch (Exception ex)
-                {
-                    Log(string.Format("Failed to monitor drive {0}: {1}", drive.Name, ex.Message));
+                $eventQueue.Enqueue($filePath)
+            }
+            Register-ObjectEvent -InputObject $watcher -EventName Created -Action $action -SourceIdentifier "FileCreated_$($drive.DeviceID)" | Out-Null
+            Register-ObjectEvent -InputObject $watcher -EventName Changed -Action $action -SourceIdentifier "FileChanged_$($drive.DeviceID)" | Out-Null
+            $watchers += $watcher
+            Write-Log "FileSystemWatcher initialized for $root"
+        } catch {
+            Write-Log ("Error setting up FileSystemWatcher for {0}: {1}" -f $root, $_.Exception.Message)
+        }
+    }
+    return $watchers
+}
+
+function Remove-UnsignedDLLs {
+    param ([int]$maxFiles = $config.MaxFilesPerDrive)
+    Write-Log "Starting unsigned DLL scan across all drives."
+    $drives = Get-CimInstance -ClassName Win32_LogicalDisk | Where-Object { $_.DriveType -in (2, 3, 4) }
+    if (-not $drives) {
+        Write-Log "No drives detected for scanning."
+        return
+    }
+    foreach ($drive in $drives) {
+        $root = $drive.DeviceID + "\"
+        Write-Log "Scanning drive: $root"
+        try {
+            $files = Get-ChildItem -Path $root -Recurse -File -Include *.dll -ErrorAction SilentlyContinue
+            if (-not $files) {
+                Write-Log "No DLL files found on drive $root"
+                continue
+            }
+            $limitedFiles = $files | Select-Object -First $maxFiles
+            foreach ($file in $limitedFiles) {
+                if ($file.Extension -ne ".dll") {
+                    Write-Log "Skipping non-DLL file: $($file.FullName)"
+                    continue
                 }
-            }
-
-            Log("Real-time system monitoring started with CIRCL Hashlookup. Press Ctrl+C to stop in non-silent mode.");
-
-            // Initial scan of all drives
-            Log("Performing initial drive scan...");
-            foreach (var drive in DriveInfo.GetDrives().Where(d => d.DriveType == DriveType.Fixed && d.IsReady))
-            {
-                ScanDirectory(drive.Name);
-            }
-
-            // Start background tasks for process and persistence monitoring
-            var processTask = Task.Run(() => MonitorProcessesAsync());
-            var persistenceTask = Task.Run(() => MonitorPersistenceAsync());
-
-            // Handle graceful shutdown
-            if (!silent)
-            {
-                Console.CancelKeyPress += (s, e) =>
-                {
-                    Log("Stopping system monitoring...");
-                    foreach (var watcher in watchers)
-                    {
-                        watcher.EnableRaisingEvents = false;
-                        watcher.Dispose();
+                if (Is-Whitelisted -filePath $file.FullName) {
+                    Write-Log "Skipping whitelisted file: $($file.FullName)"
+                    continue
+                }
+                try {
+                    $cert = Get-AuthenticodeSignature -FilePath $file.FullName -ErrorAction Stop
+                    if ($cert.Status -ne 'Valid') {
+                        Write-Log "Found unsigned DLL: $($file.FullName)"
+                        Stop-ProcessUsingDLL -filePath $file.FullName
+                        Backup-And-Quarantine -filePath $file.FullName
+                        Show-Notification -message "Unsigned DLL quarantined: $($file.FullName)"
                     }
-                    httpClient.Dispose();
-                };
-            }
-
-            // Keep running
-            await Task.WhenAll(processTask, persistenceTask);
-        }
-        catch (Exception ex)
-        {
-            Log(string.Format("Error in system monitoring: {0}", ex.Message));
-        }
-    }
-
-    private static void ScanDirectory(string directoryPath)
-    {
-        try
-        {
-            var files = Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories)
-                .Where(f => !f.StartsWith(QuarantinePath, StringComparison.OrdinalIgnoreCase));
-            Parallel.ForEach(files, new ParallelOptions { MaxDegreeOfParallelism = 2 }, async file =>
-            {
-                await ScanFileAsync(file);
-            });
-            Log(string.Format("Initial scan completed for {0}.", directoryPath));
-        }
-        catch (Exception ex)
-        {
-            Log(string.Format("Error scanning directory {0}: {1}", directoryPath, ex.Message));
-        }
-    }
-
-    private static async Task ScanFileAsync(string filePath)
-    {
-        await Task.Run(async () =>
-        {
-            try
-            {
-                if (filePath.StartsWith(QuarantinePath, StringComparison.OrdinalIgnoreCase))
-                    return;
-
-                string fileHash = ComputeSHA256(filePath);
-                if (string.IsNullOrEmpty(fileHash))
-                    return;
-
-                var circlResult = await QueryCirclAsync(fileHash);
-                if (circlResult.Trust < 30)
-                {
-                    string threatName = string.Format("CIRCL_LowTrust (Score: {0}/100, Sources: {1})", circlResult.Trust, string.Join(", ", circlResult.Sources));
-                    Log(string.Format("Threat detected: {0} ({1})", filePath, threatName));
-                    HandleMalware(filePath, threatName);
-                }
-                else if (circlResult.Trust == 50)
-                {
-                    Log(string.Format("Unknown file: {0} (CIRCL Score: {1})", filePath, circlResult.Trust));
-                }
-                else
-                {
-                    Log(string.Format("File clean: {0} (CIRCL Score: {1})", filePath, circlResult.Trust));
+                } catch {
+                    Write-Log ("Error processing {0}: {1}" -f $file.FullName, $_.Exception.Message)
                 }
             }
-            catch (Exception ex)
-            {
-                Log(string.Format("Error scanning file {0}: {1}", filePath, ex.Message));
-            }
-        });
+        } catch {
+            Write-Log ("Drive scan error on {0}: {1}" -f $root, $_.Exception.Message)
+        }
     }
+}
 
-    private static async Task MonitorProcessesAsync()
-    {
-        while (true)
-        {
-            try
-            {
-                foreach (var process in Process.GetProcesses())
-                {
-                    try
-                    {
-                        string exePath = process.MainModule != null ? process.MainModule.FileName : null;
-                        if (string.IsNullOrEmpty(exePath) || exePath.StartsWith(QuarantinePath, StringComparison.OrdinalIgnoreCase))
-                            continue;
-
-                        string hash = ComputeSHA256(exePath);
-                        if (string.IsNullOrEmpty(hash))
-                            continue;
-
-                        var circlResult = await QueryCirclAsync(hash);
-                        if (circlResult.Trust < 30)
-                        {
-                            string threatName = string.Format("CIRCL_LowTrust (Score: {0}/100, Sources: {1})", circlResult.Trust, string.Join(", ", circlResult.Sources));
-                            Log(string.Format("Malicious process detected: {0} (PID: {1}, Path: {2}, {3})", process.ProcessName, process.Id, exePath, threatName));
-                            HandleMalware(exePath, threatName, process);
-                        }
-
-                        // Advanced: Check for suspicious behavior
-                        if (IsSuspiciousProcess(process))
-                        {
-                            Log(string.Format("Suspicious behavior detected in process: {0} (PID: {1})", process.ProcessName, process.Id));
-                            HandleMalware(exePath, "Suspicious_Behavior", process);
+function Scan-AllFilesWithVirusTotal {
+    Write-Log "Starting VirusTotal scan across all drives."
+    $drives = Get-CimInstance -ClassName Win32_LogicalDisk | Where-Object { $_.DriveType -in (2, 3, 4) }
+    if (-not $drives) {
+        Write-Log "No drives detected for scanning."
+        return
+    }
+    $semaphore = New-Object System.Threading.Semaphore($maxConcurrentScans, $maxConcurrentScans)
+    $jobs = @()
+    foreach ($drive in $drives) {
+        $root = $drive.DeviceID + "\"
+        Write-Log "Scanning drive: $root"
+        try {
+            $files = Get-ChildItem -Path $root -Recurse -File -ErrorAction SilentlyContinue
+            if (-not $files) {
+                Write-Log "No files found on $root"
+                continue
+            }
+            foreach ($file in $files) {
+                if (Is-Whitelisted -filePath $file.FullName) {
+                    Write-Log "Skipping whitelisted file: $($file.FullName)"
+                    continue
+                }
+                $jobs += Start-Job -ScriptBlock {
+                    param ($filePath, $localDatabase, $virusTotalApiKey, $semaphore, $logFile, $backupFolder, $quarantineFolder, $maxRetries, $retryDelaySeconds, $maxFileSizeMB)
+                    
+                    function Write-Log {
+                        param ([string]$Message)
+                        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                        $logEntry = "[$timestamp] $Message"
+                        Write-Host $logEntry
+                        try {
+                            Add-Content -Path $logFile -Value $logEntry -ErrorAction Stop
+                        } catch {
+                            Write-Host ("Failed to write to log: {0}" -f $_.Exception.Message)
                         }
                     }
-                    catch { }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log(string.Format("Error in process monitoring: {0}", ex.Message));
-            }
-            await Task.Delay(BehaviorCheckInterval);
-        }
-    }
+                    
+                    function Calculate-FileHash {
+                        param ([string]$filePath)
+                        try {
+                            if (-not (Test-Path $filePath -PathType Leaf)) {
+                                Write-Log "Skipping ${filePath}: Not a valid file."
+                                return $null
+                            }
+                            $fileInfo = Get-Item $filePath -ErrorAction Stop
+                            if ($fileInfo.Length -eq 0) {
+                                Write-Log "Skipping ${filePath}: Zero-byte file."
+                                return $null
+                            }
+                            if ($fileInfo.Length -gt ($maxFileSizeMB * 1MB)) {
+                                Write-Log "Skipping ${filePath}: File size exceeds $maxFileSizeMB MB."
+                                return $null
+                            }
+                            $hash = Get-FileHash -Path $filePath -Algorithm SHA256 -ErrorAction Stop
+                            return $hash.Hash.ToLower()
+                        } catch {
+                            Write-Log ("Error hashing ${filePath}: {0}" -f $_.Exception.Message)
+                            return $null
+                        }
+                    }
+                    
+                    function Upload-FileToVirusTotal {
+                        param ([string]$filePath, [string]$fileHash)
+                        try {
+                            $fileInfo = Get-Item $filePath -ErrorAction Stop
+                            if ($fileInfo.Length -gt ($maxFileSizeMB * 1MB)) {
+                                Write-Log "Cannot upload ${filePath}: File size exceeds $maxFileSizeMB MB."
+                                return $false
+                            }
+                            $url = "https://www.virustotal.com/api/v3/files"
+                            $headers = @{ "x-apikey" = $virusTotalApiKey }
+                            
+                            # Create a multipart form-data request
+                            $boundary = [System.Guid]::NewGuid().ToString()
+                            $contentType = "multipart/form-data; boundary=$boundary"
+                            $fileBytes = [System.IO.File]::ReadAllBytes($filePath)
+                            $fileName = [System.IO.Path]::GetFileName($filePath)
+                            
+                            # Construct the multipart form-data body
+                            $bodyLines = @(
+                                "--$boundary",
+                                "Content-Disposition: form-data; name=`"file`"; filename=`"$fileName`"",
+                                "Content-Type: application/octet-stream",
+                                "",
+                                [System.Text.Encoding]::UTF8.GetString($fileBytes),
+                                "--$boundary--"
+                            )
+                            $body = $bodyLines -join "`r`n"
 
-    private static async Task MonitorPersistenceAsync()
-    {
-        while (true)
-        {
-            try
-            {
-                var runKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run");
-                if (runKey != null)
-                {
-                    foreach (var valueName in runKey.GetValueNames())
-                    {
-                        string path = runKey.GetValue(valueName) != null ? runKey.GetValue(valueName).ToString() : null;
-                        if (!string.IsNullOrEmpty(path) && File.Exists(path) && !path.StartsWith(QuarantinePath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            string hash = ComputeSHA256(path);
-                            if (string.IsNullOrEmpty(hash))
-                                continue;
-
-                            var circlResult = await QueryCirclAsync(hash);
-                            if (circlResult.Trust < 30)
-                            {
-                                string threatName = string.Format("CIRCL_LowTrust (Score: {0}/100, Sources: {1})", circlResult.Trust, string.Join(", ", circlResult.Sources));
-                                Log(string.Format("Malicious persistence detected: {0} ({1})", path, threatName));
-                                HandleMalware(path, threatName);
-                                try
-                                {
-                                    runKey.DeleteValue(valueName);
-                                    Log(string.Format("Removed malicious registry entry: {0}", valueName));
+                            Write-Log "Uploading file ${filePath} to VirusTotal."
+                            $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Post -ContentType $contentType -Body $body -ErrorAction Stop
+                            $analysisId = $response.data.id
+                            Write-Log "File ${filePath} uploaded. Analysis ID: $analysisId"
+                            
+                            $analysisUrl = "https://www.virustotal.com/api/v3/analyses/$analysisId"
+                            for ($i = 0; $i -lt $maxRetries; $i++) {
+                                Start-Sleep -Seconds $retryDelaySeconds
+                                try {
+                                    $analysisResponse = Invoke-RestMethod -Uri $analysisUrl -Headers $headers -Method Get -ErrorAction Stop
+                                    if ($analysisResponse.data.attributes.status -eq "completed") {
+                                        $maliciousCount = $analysisResponse.data.attributes.stats.malicious
+                                        Write-Log "VirusTotal analysis for ${fileHash}: $maliciousCount malicious detections."
+                                        return $maliciousCount -gt 3
+                                    }
+                                } catch {
+                                    Write-Log ("Error checking analysis status for ${fileHash}: {0}" -f $_.Exception.Message)
                                 }
-                                catch (Exception ex)
-                                {
-                                    Log(string.Format("Failed to remove registry entry {0}: {1}", valueName, ex.Message));
+                            }
+                            Write-Log "Analysis for ${fileHash} did not complete in time."
+                            return $false
+                        } catch {
+                            Write-Log ("Failed to upload ${filePath}: {0}" -f $_.Exception.Message)
+                            return $false
+                        }
+                    }
+                    
+                    function Scan-FileWithVirusTotal {
+                        param ([string]$fileHash, [string]$filePath)
+                        for ($i = 0; $i -lt $maxRetries; $i++) {
+                            try {
+                                $url = "https://www.virustotal.com/api/v3/files/$fileHash"
+                                $headers = @{ "x-apikey" = $virusTotalApiKey }
+                                $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Get -TimeoutSec 30
+                                if ($response.data.attributes) {
+                                    $maliciousCount = $response.data.attributes.last_analysis_stats.malicious
+                                    Write-Log "VirusTotal result for ${fileHash}: $maliciousCount malicious detections."
+                                    return $maliciousCount -gt 3
+                                }
+                            } catch {
+                                if ($_.Exception.Response.StatusCode -eq 404) {
+                                    Write-Log "File hash ${fileHash} not found in VirusTotal database. Attempting to upload."
+                                    return Upload-FileToVirusTotal -filePath $filePath -fileHash $fileHash
+                                }
+                                Write-Log ("Error scanning ${fileHash}: {0}" -f $_.Exception.Message)
+                                if ($i -lt ($maxRetries - 1)) {
+                                    Start-Sleep -Seconds $retryDelaySeconds
+                                    continue
                                 }
                             }
                         }
+                        return $false
                     }
-                    runKey.Close();
-                }
+                    
+                    function Stop-ProcessUsingDLL {
+                        param ([string]$filePath)
+                        try {
+                            $processes = Get-Process | Where-Object { ($_.Modules | Where-Object { $_.FileName -eq $filePath }) }
+                            foreach ($process in $processes) {
+                                Stop-Process -Id $process.Id -Force -ErrorAction Stop
+                                Write-Log "Stopped process $($process.Name) (PID: $($process.Id)) using ${filePath}"
+                                try {
+                                    $parent = Get-CimInstance -ClassName Win32_Process | Where-Object { $_.ProcessId -eq $process.Id } | Select-Object -ExpandProperty ParentProcessId
+                                    if ($parent -and $parent -ne 0) {
+                                        Stop-Process -Id $parent -Force -ErrorAction Stop
+                                        $parentProcess = Get-Process -Id $parent -ErrorAction SilentlyContinue
+                                        if ($parentProcess) {
+                                            Write-Log "Stopped parent process $($parentProcess.Name) (PID: $parent) of process using ${filePath}"
+                                        }
+                                    }
+                                } catch {
+                                    Write-Log ("Error stopping parent process for PID $($process.Id): {0}" -f $_.Exception.Message)
+                                }
+                            }
+                        } catch {
+                            Write-Log ("Error stopping processes for ${filePath}: {0}" -f $_.Exception.Message)
+                        }
+                    }
+                    
+                    function Backup-And-Quarantine {
+                        param ([string]$filePath)
+                        try {
+                            $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+                            if (-not $isAdmin) {
+                                Write-Log "Insufficient permissions to process ${filePath}"
+                                return
+                            }
+                            # Check for file locks
+                            try {
+                                $handle = [System.IO.File]::Open($filePath, 'Open', 'Read', 'None')
+                                $handle.Close()
+                            } catch {
+                                Write-Log "File ${filePath} is locked by another process."
+                                return
+                            }
+                            takeown /F $filePath /A | Out-Null
+                            Write-Log "Took ownership of file: ${filePath}"
+                            $acl = Get-Acl -Path $filePath
+                            $acl.SetAccessRuleProtection($true, $false)
+                            $acl.Access | ForEach-Object { $acl.RemoveAccessRule($_) | Out-Null }
+                            $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule("Administrators", "FullControl", "Allow")
+                            $acl.AddAccessRule($adminRule)
+                            Set-Acl -Path $filePath -AclObject $acl
+                            Start-Sleep -Milliseconds 500
+                            Write-Log "Removed all permissions and granted Administrators full control for file: ${filePath}"
+                            $backupPath = Join-Path -Path $backupFolder -ChildPath ("$(Split-Path $filePath -Leaf)_$(Get-Date -Format 'yyyyMMdd_HHmmss')")
+                            Copy-Item -Path $filePath -Destination $backupPath -Force -ErrorAction Stop
+                            Write-Log "Backed up file: ${filePath} to $backupPath"
+                            $quarantinePath = Join-Path -Path $quarantineFolder -ChildPath (Split-Path $filePath -Leaf)
+                            Move-Item -Path $filePath -Destination $quarantinePath -Force -ErrorAction Stop
+                            Write-Log "Quarantined file: ${filePath} to $quarantinePath"
+                        } catch {
+                            Write-Log ("Failed to backup/quarantine ${filePath}: {0}" -f $_.Exception.Message)
+                        }
+                    }
+                    
+                    function Show-Notification {
+                        param ([string]$message)
+                        try {
+                            Add-Type -AssemblyName System.Windows.Forms
+                            $notify = New-Object System.Windows.Forms.NotifyIcon
+                            $notify.Icon = [System.Drawing.SystemIcons]::Warning
+                            $notify.Visible = $true
+                            $notify.ShowBalloonTip(5000, "GShield Antivirus", $message, [System.Windows.Forms.ToolTipIcon]::Warning)
+                            Start-Sleep -Seconds 5
+                            $notify.Dispose()
+                        } catch {
+                            Write-Log ("Failed to show notification: {0}" -f $_.Exception.Message)
+                        }
+                    }
+                    
+                    try {
+                        $semaphore.WaitOne()
+                        $hash = Calculate-FileHash -filePath $filePath
+                        if (-not $hash) { return }
+                        if (Test-Path $localDatabase) {
+                            $lines = Get-Content $localDatabase -ErrorAction SilentlyContinue
+                            $scannedFiles = @{}
+                            foreach ($line in $lines) {
+                                if ($line -match "^([0-9a-f]{64}),(true|false)$") {
+                                    $scannedFiles[$matches[1]] = [bool]$matches[2]
+                                }
+                            }
+                        }
+                        if ($scannedFiles.ContainsKey($hash)) { return }
+                        $isMalicious = Scan-FileWithVirusTotal -fileHash $hash -filePath $filePath
+                        Add-Content -Path $localDatabase -Value "$hash,$(-not $isMalicious)"
+                        if ($isMalicious) {
+                            Stop-ProcessUsingDLL -filePath $filePath
+                            Backup-And-Quarantine -filePath $filePath
+                            Show-Notification -message "Malicious file quarantined: $filePath"
+                        }
+                    } catch {
+                        Write-Log ("Error processing ${filePath}: {0}" -f $_.Exception.Message)
+                    } finally {
+                        $semaphore.Release()
+                    }
+                } -ArgumentList $file.FullName, $localDatabase, $virusTotalApiKey, $semaphore, $logFile, $backupFolder, $quarantineFolder, $maxRetries, $retryDelaySeconds, $maxFileSizeMB
             }
-            catch (Exception ex)
-            {
-                Log(string.Format("Error in persistence monitoring: {0}", ex.Message));
-            }
-            await Task.Delay(BehaviorCheckInterval);
+        } catch {
+            Write-Log ("Error scanning drive {0}: {1}" -f $root, $_.Exception.Message)
         }
     }
-
-    private static bool IsSuspiciousProcess(Process process)
-    {
-        try
-        {
-            // Check CPU usage and memory
-            if (process.TotalProcessorTime.TotalSeconds > 60 && process.WorkingSet64 > 500 * 1024 * 1024)
-                return true;
-
-            // Check for unsigned executable
-            var fileInfo = FileVersionInfo.GetVersionInfo(process.MainModule != null ? process.MainModule.FileName : "");
-            if (string.IsNullOrEmpty(fileInfo.CompanyName) || fileInfo.CompanyName == "Unknown")
-                return true;
-
-            return false;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static void HandleMalware(string filePath, string threatName, Process process = null)
-    {
-        // Kill process if provided
-        if (process != null)
-        {
-            try
-            {
-                if (!process.HasExited)
-                {
-                    process.Kill();
-                    Log(string.Format("Terminated process: {0} (PID: {1})", process.ProcessName, process.Id));
-                }
-            }
-            catch (Exception ex)
-            {
-                Log(string.Format("Failed to terminate process: {0} (PID: {1}): {2}", process.ProcessName, process.Id, ex.Message));
-            }
-        }
-
-        // Quarantine file
-        try
-        {
-            string fileName = Path.GetFileName(filePath);
-            string quarantineFile = Path.Combine(QuarantinePath, string.Format("{0}_{1}_{2}", threatName, DateTime.Now.Ticks, fileName));
-            File.Move(filePath, quarantineFile);
-            Log(string.Format("Quarantined: {0} to {1}", filePath, quarantineFile));
-
-            // Block file execution
-            try
-            {
-                var acl = File.GetAccessControl(quarantineFile);
-                acl.SetAccessRuleProtection(true, false);
-                var denyRule = new FileSystemAccessRule(WindowsIdentity.GetCurrent().Name, FileSystemRights.ExecuteFile, AccessControlType.Deny);
-                acl.AddAccessRule(denyRule);
-                File.SetAccessControl(quarantineFile, acl);
-                Log(string.Format("Blocked execution: {0}", quarantineFile));
-            }
-            catch (Exception ex)
-            {
-                Log(string.Format("Failed to block execution for {0}: {1}", quarantineFile, ex.Message));
-            }
-        }
-        catch (Exception ex)
-        {
-            Log(string.Format("Failed to quarantine {0}: {1}", filePath, ex.Message));
-        }
-    }
-
-    private static string ComputeSHA256(string filePath)
-    {
-        try
-        {
-            using (var sha256 = SHA256.Create())
-            using (var stream = File.OpenRead(filePath))
-            {
-                byte[] hash = sha256.ComputeHash(stream);
-                return BitConverter.ToString(hash).Replace("-", "").ToLower();
-            }
-        }
-        catch
-        {
-            return string.Empty;
-        }
-    }
-
-    private static async Task<CirclResult> QueryCirclAsync(string hash)
-    {
-        await apiSemaphore.WaitAsync();
-        try
-        {
-            string url = string.Format("{0}/lookup/sha256/{1}", CirclBaseUrl, hash);
-            var response = await httpClient.GetAsync(url);
-            if (response.IsSuccessStatusCode)
-            {
-                string json = await response.Content.ReadAsStringAsync();
-                var jObject = JObject.Parse(json);
-                var trust = jObject["hashlookup:trust"] != null ? jObject["hashlookup:trust"].Value<int>() : 50;
-                var sources = jObject["sources"] != null ? jObject["sources"].Values<string>().ToList() : new List<string>();
-                return new CirclResult { Trust = trust, Sources = sources };
-            }
-        }
-        catch (Exception ex)
-        {
-            Log(string.Format("CIRCL API error for {0}: {1}", hash, ex.Message));
-        }
-        finally
-        {
-            apiSemaphore.Release();
-        }
-        return new CirclResult { Trust = 50, Sources = new List<string>() };
-    }
-
-    private static void Log(string message)
-    {
-        string logMessage = string.Format("{0:yyyy-MM-dd HH:mm:ss} - {1}", DateTime.Now, message);
-        try
-        {
-            File.AppendAllText(LogPath, logMessage + Environment.NewLine);
-        }
-        catch { }
-    }
-
-    private class CirclResult
-    {
-        public int Trust { get; set; }
-        public List<string> Sources { get; set; }
-        public CirclResult()
-        {
-            Sources = new List<string>();
-        }
-    }
-}
-"@
-
-# Save the script to a fixed location for Task Scheduler
-$scriptPath = "C:\ProgramData\SystemAntivirus.ps1"
-if (-not (Test-Path $scriptPath)) {
-    Set-Content -Path $scriptPath -Value $PSCommandPath -Force
+    $jobs | Wait-Job | Receive-Job
+    $jobs | Remove-Job
+    Write-Log "Finished VirusTotal scan."
 }
 
-# Function to set up Task Scheduler for startup and persistence
-function Register-AntivirusTask {
-    $taskName = "Antivirus"
-    $scriptPath = "C:\ProgramData\Antivirus.ps1"
-    $action = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptPath`""
-    $trigger = New-ScheduledTaskTrigger -AtStartup
-    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 5)
-    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-
+function Stop-ProcessUsingDLL {
+    param ([string]$filePath)
     try {
-        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force
-        Write-Host "Antivirus scheduled task registered successfully. Will run at startup."
+        $processes = Get-Process | Where-Object { ($_.Modules | Where-Object { $_.FileName -eq $filePath }) }
+        foreach ($process in $processes) {
+            Stop-Process -Id $process.Id -Force -ErrorAction Stop
+            Write-Log "Stopped process $($process.Name) (PID: $($process.Id)) using ${filePath}"
+            try {
+                $parent = Get-CimInstance -ClassName Win32_Process | Where-Object { $_.ProcessId -eq $process.Id } | Select-Object -ExpandProperty ParentProcessId
+                if ($parent -and $parent -ne 0) {
+                    Stop-Process -Id $parent -Force -ErrorAction Stop
+                    $parentProcess = Get-Process -Id $parent -ErrorAction SilentlyContinue
+                    if ($parentProcess) {
+                        Write-Log "Stopped parent process $($parentProcess.Name) (PID: $parent) of process using ${filePath}"
+                    }
+                }
+            } catch {
+                Write-Log ("Error stopping parent process for PID $($process.Id): {0}" -f $_.Exception.Message)
+            }
+        }
+    } catch {
+        Write-Log ("Error stopping processes for ${filePath}: {0}" -f $_.Exception.Message)
     }
-    catch {
-        Write-Host "Failed to register scheduled task: $_"
+}
+
+function Backup-And-Quarantine {
+    param ([string]$filePath)
+    try {
+        $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        if (-not $isAdmin) {
+            Write-Log "Insufficient permissions to process ${filePath}"
+            return
+        }
+        # Check for file locks
+        try {
+            $handle = [System.IO.File]::Open($filePath, 'Open', 'Read', 'None')
+            $handle.Close()
+        } catch {
+            Write-Log "File ${filePath} is locked by another process."
+            return
+        }
+        takeown /F $filePath /A | Out-Null
+        Write-Log "Took ownership of file: ${filePath}"
+        $acl = Get-Acl -Path $filePath
+        $acl.SetAccessRuleProtection($true, $false)
+        $acl.Access | ForEach-Object { $acl.RemoveAccessRule($_) | Out-Null }
+        $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule("Administrators", "FullControl", "Allow")
+        $acl.AddAccessRule($adminRule)
+        Set-Acl -Path $filePath -AclObject $acl
+        Start-Sleep -Milliseconds 500
+        Write-Log "Removed all permissions and granted Administrators full control for file: ${filePath}"
+        $backupPath = Join-Path -Path $backupFolder -ChildPath ("$(Split-Path $filePath -Leaf)_$(Get-Date -Format 'yyyyMMdd_HHmmss')")
+        Copy-Item -Path $filePath -Destination $backupPath -Force -ErrorAction Stop
+        Write-Log "Backed up file: ${filePath} to $backupPath"
+        $quarantinePath = Join-Path -Path $quarantineFolder -ChildPath (Split-Path $filePath -Leaf)
+        Move-Item -Path $filePath -Destination $quarantinePath -Force -ErrorAction Stop
+        Write-Log "Quarantined file: ${filePath} to $quarantinePath"
+    } catch {
+        Write-Log ("Failed to backup/quarantine ${filePath}: {0}" -f $_.Exception.Message)
+    }
+}
+
+function Show-Notification {
+    param ([string]$message)
+    try {
+        Add-Type -AssemblyName System.Windows.Forms
+        $notify = New-Object System.Windows.Forms.NotifyIcon
+        $notify.Icon = [System.Drawing.SystemIcons]::Warning
+        $notify.Visible = $true
+        $notify.ShowBalloonTip(5000, "GShield Antivirus", $message, [System.Windows.Forms.ToolTipIcon]::Warning)
+        Start-Sleep -Seconds 5
+        $notify.Dispose()
+    } catch {
+        Write-Log ("Failed to show notification: {0}" -f $_.Exception.Message)
+    }
+}
+
+function Is-Whitelisted {
+    param ([string]$filePath)
+    foreach ($pattern in $whitelistPatterns) {
+        if ($filePath -like $pattern) {
+            return $true
+        }
+    }
+    return $false
+}
+
+# Main execution
+try {
+    Write-Log "Starting antivirus scan in background job"
+    # Check for admin privileges
+    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    if (-not $isAdmin) {
+        Write-Log "Script requires administrative privileges"
+        Remove-Item $lockFile -Force -ErrorAction SilentlyContinue
         exit
     }
+    # Check for existing jobs
+    $existingJob = Get-Job | Where-Object { $_.Name -eq "AntivirusMainJob" -and $_.State -eq "Running" }
+    if ($existingJob) {
+        Write-Log "An antivirus job (ID: $($existingJob.Id)) is already running. Exiting."
+        Remove-Item $lockFile -Force -ErrorAction SilentlyContinue
+        exit
+    }
+    # Start the main execution as a background job
+    $job = Start-Job -Name "AntivirusMainJob" -ScriptBlock {
+        param ($logFile, $localDatabase, $virusTotalApiKey, $maxRetries, $retryDelaySeconds, $maxConcurrentScans, $whitelistPatterns, $config, $backupFolder, $quarantineFolder, $maxFileSizeMB, $eventQueue, $maxQueueSize, $lockFile)
+        
+        function Write-Log {
+            param ([string]$Message)
+            $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            $logEntry = "[$timestamp] $Message"
+            Write-Host $logEntry
+            try {
+                if ((Test-Path $logFile) -and ((Get-Item $logFile -ErrorAction SilentlyContinue).Length -ge ($config.MaxLogSizeMB * 1MB))) {
+                    $archiveName = Join-Path (Split-Path $logFile -Parent) "antivirus_log_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+                    Rename-Item -Path $logFile -NewName $archiveName -ErrorAction SilentlyContinue
+                    Write-Host "Rotated log to $archiveName"
+                }
+                Add-Content -Path $logFile -Value $logEntry -ErrorAction Stop
+            } catch {
+                Write-Host ("Failed to write to log: {0}" -f $_.Exception.Message)
+            }
+        }
+        
+        function Calculate-FileHash {
+            param ([string]$filePath)
+            try {
+                if (-not (Test-Path $filePath -PathType Leaf)) {
+                    Write-Log "Skipping ${filePath}: Not a valid file."
+                    return $null
+                }
+                $fileInfo = Get-Item $filePath -ErrorAction Stop
+                if ($fileInfo.Length -eq 0) {
+                    Write-Log "Skipping ${filePath}: Zero-byte file."
+                    return $null
+                }
+                if ($fileInfo.Length -gt ($maxFileSizeMB * 1MB)) {
+                    Write-Log "Skipping ${filePath}: File size exceeds $maxFileSizeMB MB."
+                    return $null
+                }
+                $hash = Get-FileHash -Path $filePath -Algorithm SHA256 -ErrorAction Stop
+                return $hash.Hash.ToLower()
+            } catch {
+                Write-Log ("Error hashing ${filePath}: {0}" -f $_.Exception.Message)
+                return $null
+            }
+        }
+        
+        function Upload-FileToVirusTotal {
+            param ([string]$filePath, [string]$fileHash)
+            try {
+                $fileInfo = Get-Item $filePath -ErrorAction Stop
+                if ($fileInfo.Length -gt ($maxFileSizeMB * 1MB)) {
+                    Write-Log "Cannot upload ${filePath}: File size exceeds $maxFileSizeMB MB."
+                    return $false
+                }
+                $url = "https://www.virustotal.com/api/v3/files"
+                $headers = @{ "x-apikey" = $virusTotalApiKey }
+                
+                # Create a multipart form-data request
+                $boundary = [System.Guid]::NewGuid().ToString()
+                $contentType = "multipart/form-data; boundary=$boundary"
+                $fileBytes = [System.IO.File]::ReadAllBytes($filePath)
+                $fileName = [System.IO.Path]::GetFileName($filePath)
+                
+                # Construct the multipart form-data body
+                $bodyLines = @(
+                    "--$boundary",
+                    "Content-Disposition: form-data; name=`"file`"; filename=`"$fileName`"",
+                    "Content-Type: application/octet-stream",
+                    "",
+                    [System.Text.Encoding]::UTF8.GetString($fileBytes),
+                    "--$boundary--"
+                )
+                $body = $bodyLines -join "`r`n"
+
+                Write-Log "Uploading file ${filePath} to VirusTotal."
+                $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Post -ContentType $contentType -Body $body -ErrorAction Stop
+                $analysisId = $response.data.id
+                Write-Log "File ${filePath} uploaded. Analysis ID: $analysisId"
+                
+                $analysisUrl = "https://www.virustotal.com/api/v3/analyses/$analysisId"
+                for ($i = 0; $i -lt $maxRetries; $i++) {
+                    Start-Sleep -Seconds $retryDelaySeconds
+                    try {
+                        $analysisResponse = Invoke-RestMethod -Uri $analysisUrl -Headers $headers -Method Get -ErrorAction Stop
+                        if ($analysisResponse.data.attributes.status -eq "completed") {
+                            $maliciousCount = $analysisResponse.data.attributes.stats.malicious
+                            Write-Log "VirusTotal analysis for ${fileHash}: $maliciousCount malicious detections."
+                            return $maliciousCount -gt 3
+                        }
+                    } catch {
+                        Write-Log ("Error checking analysis status for ${fileHash}: {0}" -f $_.Exception.Message)
+                    }
+                }
+                Write-Log "Analysis for ${fileHash} did not complete in time."
+                return $false
+            } catch {
+                Write-Log ("Failed to upload ${filePath}: {0}" -f $_.Exception.Message)
+                return $false
+            }
+        }
+        
+        function Scan-FileWithVirusTotal {
+            param ([string]$fileHash, [string]$filePath)
+            for ($i = 0; $i -lt $maxRetries; $i++) {
+                try {
+                    $url = "https://www.virustotal.com/api/v3/files/$fileHash"
+                    $headers = @{ "x-apikey" = $virusTotalApiKey }
+                    $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Get -TimeoutSec 30
+                    if ($response.data.attributes) {
+                        $maliciousCount = $response.data.attributes.last_analysis_stats.malicious
+                        Write-Log "VirusTotal result for ${fileHash}: $maliciousCount malicious detections."
+                        return $maliciousCount -gt 3
+                    }
+                } catch {
+                    if ($_.Exception.Response.StatusCode -eq 404) {
+                        Write-Log "File hash ${fileHash} not found in VirusTotal database. Attempting to upload."
+                        return Upload-FileToVirusTotal -filePath $filePath -fileHash $fileHash
+                    }
+                    Write-Log ("Error scanning ${fileHash}: {0}" -f $_.Exception.Message)
+                    if ($i -lt ($maxRetries - 1)) {
+                        Start-Sleep -Seconds $retryDelaySeconds
+                        continue
+                    }
+                }
+            }
+            return $false
+        }
+        
+        function Start-FileSystemWatcher {
+            $drives = Get-CimInstance -ClassName Win32_LogicalDisk | Where-Object { $_.DriveType -in (2, 3, 4) }
+            $watchers = @()
+            foreach ($drive in $drives) {
+                $root = $drive.DeviceID + "\"
+                Write-Log "Setting up FileSystemWatcher for drive: $root"
+                try {
+                    $watcher = New-Object System.IO.FileSystemWatcher
+                    $watcher.Path = $root
+                    $watcher.IncludeSubdirectories = $true
+                    $watcher.EnableRaisingEvents = $true
+                    $watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor [System.IO.NotifyFilters]::LastWrite
+                    $action = {
+                        param ($source, $event)
+                        $filePath = $event.FullPath
+                        if ($eventQueue.Count -ge $maxQueueSize) {
+                            $eventQueue.Dequeue() | Out-Null
+                        }
+                        $eventQueue.Enqueue($filePath)
+                    }
+                    Register-ObjectEvent -InputObject $watcher -EventName Created -Action $action -SourceIdentifier "FileCreated_$($drive.DeviceID)" | Out-Null
+                    Register-ObjectEvent -InputObject $watcher -EventName Changed -Action $action -SourceIdentifier "FileChanged_$($drive.DeviceID)" | Out-Null
+                    $watchers += $watcher
+                    Write-Log "FileSystemWatcher initialized for $root"
+                } catch {
+                    Write-Log ("Error setting up FileSystemWatcher for {0}: {1}" -f $root, $_.Exception.Message)
+                }
+            }
+            return $watchers
+        }
+        
+        function Remove-UnsignedDLLs {
+            param ([int]$maxFiles = $config.MaxFilesPerDrive)
+            Write-Log "Starting unsigned DLL scan across all drives."
+            $drives = Get-CimInstance -ClassName Win32_LogicalDisk | Where-Object { $_.DriveType -in (2, 3, 4) }
+            if (-not $drives) {
+                Write-Log "No drives detected for scanning."
+                return
+            }
+            foreach ($drive in $drives) {
+                $root = $drive.DeviceID + "\"
+                Write-Log "Scanning drive: $root"
+                try {
+                    $files = Get-ChildItem -Path $root -Recurse -File -Include *.dll -ErrorAction SilentlyContinue
+                    if (-not $files) {
+                        Write-Log "No DLL files found on drive $root"
+                        continue
+                    }
+                    $limitedFiles = $files | Select-Object -First $maxFiles
+                    foreach ($file in $limitedFiles) {
+                        if ($file.Extension -ne ".dll") {
+                            Write-Log "Skipping non-DLL file: $($file.FullName)"
+                            continue
+                        }
+                        if (Is-Whitelisted -filePath $file.FullName) {
+                            Write-Log "Skipping whitelisted file: $($file.FullName)"
+                            continue
+                        }
+                        try {
+                            $cert = Get-AuthenticodeSignature -FilePath $file.FullName -ErrorAction Stop
+                            if ($cert.Status -ne 'Valid') {
+                                Write-Log "Found unsigned DLL: $($file.FullName)"
+                                Stop-ProcessUsingDLL -filePath $file.FullName
+                                Backup-And-Quarantine -filePath $file.FullName
+                                Show-Notification -message "Unsigned DLL quarantined: $($file.FullName)"
+                            }
+                        } catch {
+                            Write-Log ("Error processing {0}: {1}" -f $file.FullName, $_.Exception.Message)
+                        }
+                    }
+                } catch {
+                    Write-Log ("Drive scan error on {0}: {1}" -f $root, $_.Exception.Message)
+                }
+            }
+        }
+        
+        function Scan-AllFilesWithVirusTotal {
+            Write-Log "Starting VirusTotal scan across all drives."
+            $drives = Get-CimInstance -ClassName Win32_LogicalDisk | Where-Object { $_.DriveType -in (2, 3, 4) }
+            if (-not $drives) {
+                Write-Log "No drives detected for scanning."
+                return
+            }
+            $semaphore = New-Object System.Threading.Semaphore($maxConcurrentScans, $maxConcurrentScans)
+            $jobs = @()
+            foreach ($drive in $drives) {
+                $root = $drive.DeviceID + "\"
+                Write-Log "Scanning drive: $root"
+                try {
+                    $files = Get-ChildItem -Path $root -Recurse -File -ErrorAction SilentlyContinue
+                    if (-not $files) {
+                        Write-Log "No files found on $root"
+                        continue
+                    }
+                    foreach ($file in $files) {
+                        if (Is-Whitelisted -filePath $file.FullName) {
+                            Write-Log "Skipping whitelisted file: $($file.FullName)"
+                            continue
+                        }
+                        $jobs += Start-Job -ScriptBlock {
+                            param ($filePath, $localDatabase, $virusTotalApiKey, $semaphore, $logFile, $backupFolder, $quarantineFolder, $maxRetries, $retryDelaySeconds, $maxFileSizeMB)
+                            
+                            function Write-Log {
+                                param ([string]$Message)
+                                $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                                $logEntry = "[$timestamp] $Message"
+                                Write-Host $logEntry
+                                try {
+                                    Add-Content -Path $logFile -Value $logEntry -ErrorAction Stop
+                                } catch {
+                                    Write-Host ("Failed to write to log: {0}" -f $_.Exception.Message)
+                                }
+                            }
+                            
+                            function Calculate-FileHash {
+                                param ([string]$filePath)
+                                try {
+                                    if (-not (Test-Path $filePath -PathType Leaf)) {
+                                        Write-Log "Skipping ${filePath}: Not a valid file."
+                                        return $null
+                                    }
+                                    $fileInfo = Get-Item $filePath -ErrorAction Stop
+                                    if ($fileInfo.Length -eq 0) {
+                                        Write-Log "Skipping ${filePath}: Zero-byte file."
+                                        return $null
+                                    }
+                                    if ($fileInfo.Length -gt ($maxFileSizeMB * 1MB)) {
+                                        Write-Log "Skipping ${filePath}: File size exceeds $maxFileSizeMB MB."
+                                        return $null
+                                    }
+                                    $hash = Get-FileHash -Path $filePath -Algorithm SHA256 -ErrorAction Stop
+                                    return $hash.Hash.ToLower()
+                                } catch {
+                                    Write-Log ("Error hashing ${filePath}: {0}" -f $_.Exception.Message)
+                                    return $null
+                                }
+                            }
+                            
+                            function Upload-FileToVirusTotal {
+                                param ([string]$filePath, [string]$fileHash)
+                                try {
+                                    $fileInfo = Get-Item $filePath -ErrorAction Stop
+                                    if ($fileInfo.Length -gt ($maxFileSizeMB * 1MB)) {
+                                        Write-Log "Cannot upload ${filePath}: File size exceeds $maxFileSizeMB MB."
+                                        return $false
+                                    }
+                                    $url = "https://www.virustotal.com/api/v3/files"
+                                    $headers = @{ "x-apikey" = $virusTotalApiKey }
+                                    
+                                    # Create a multipart form-data request
+                                    $boundary = [System.Guid]::NewGuid().ToString()
+                                    $contentType = "multipart/form-data; boundary=$boundary"
+                                    $fileBytes = [System.IO.File]::ReadAllBytes($filePath)
+                                    $fileName = [System.IO.Path]::GetFileName($filePath)
+                                    
+                                    # Construct the multipart form-data body
+                                    $bodyLines = @(
+                                        "--$boundary",
+                                        "Content-Disposition: form-data; name=`"file`"; filename=`"$fileName`"",
+                                        "Content-Type: application/octet-stream",
+                                        "",
+                                        [System.Text.Encoding]::UTF8.GetString($fileBytes),
+                                        "--$boundary--"
+                                    )
+                                    $body = $bodyLines -join "`r`n"
+
+                                    Write-Log "Uploading file ${filePath} to VirusTotal."
+                                    $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Post -ContentType $contentType -Body $body -ErrorAction Stop
+                                    $analysisId = $response.data.id
+                                    Write-Log "File ${filePath} uploaded. Analysis ID: $analysisId"
+                                    
+                                    $analysisUrl = "https://www.virustotal.com/api/v3/analyses/$analysisId"
+                                    for ($i = 0; $i -lt $maxRetries; $i++) {
+                                        Start-Sleep -Seconds $retryDelaySeconds
+                                        try {
+                                            $analysisResponse = Invoke-RestMethod -Uri $analysisUrl -Headers $headers -Method Get -ErrorAction Stop
+                                            if ($analysisResponse.data.attributes.status -eq "completed") {
+                                                $maliciousCount = $analysisResponse.data.attributes.stats.malicious
+                                                Write-Log "VirusTotal analysis for ${fileHash}: $maliciousCount malicious detections."
+                                                return $maliciousCount -gt 3
+                                            }
+                                        } catch {
+                                            Write-Log ("Error checking analysis status for ${fileHash}: {0}" -f $_.Exception.Message)
+                                        }
+                                    }
+                                    Write-Log "Analysis for ${fileHash} did not complete in time."
+                                    return $false
+                                } catch {
+                                    Write-Log ("Failed to upload ${filePath}: {0}" -f $_.Exception.Message)
+                                    return $false
+                                }
+                            }
+                            
+                            function Scan-FileWithVirusTotal {
+                                param ([string]$fileHash, [string]$filePath)
+                                for ($i = 0; $i -lt $maxRetries; $i++) {
+                                    try {
+                                        $url = "https://www.virustotal.com/api/v3/files/$fileHash"
+                                        $headers = @{ "x-apikey" = $virusTotalApiKey }
+                                        $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Get -TimeoutSec 30
+                                        if ($response.data.attributes) {
+                                            $maliciousCount = $response.data.attributes.last_analysis_stats.malicious
+                                            Write-Log "VirusTotal result for ${fileHash}: $maliciousCount malicious detections."
+                                            return $maliciousCount -gt 3
+                                        }
+                                    } catch {
+                                        if ($_.Exception.Response.StatusCode -eq 404) {
+                                            Write-Log "File hash ${fileHash} not found in VirusTotal database. Attempting to upload."
+                                            return Upload-FileToVirusTotal -filePath $filePath -fileHash $fileHash
+                                        }
+                                        Write-Log ("Error scanning ${fileHash}: {0}" -f $_.Exception.Message)
+                                        if ($i -lt ($maxRetries - 1)) {
+                                            Start-Sleep -Seconds $retryDelaySeconds
+                                            continue
+                                        }
+                                    }
+                                }
+                                return $false
+                            }
+                            
+                            function Stop-ProcessUsingDLL {
+                                param ([string]$filePath)
+                                try {
+                                    $processes = Get-Process | Where-Object { ($_.Modules | Where-Object { $_.FileName -eq $filePath }) }
+                                    foreach ($process in $processes) {
+                                        Stop-Process -Id $process.Id -Force -ErrorAction Stop
+                                        Write-Log "Stopped process $($process.Name) (PID: $($process.Id)) using ${filePath}"
+                                        try {
+                                            $parent = Get-CimInstance -ClassName Win32_Process | Where-Object { $_.ProcessId -eq $process.Id } | Select-Object -ExpandProperty ParentProcessId
+                                            if ($parent -and $parent -ne 0) {
+                                                Stop-Process -Id $parent -Force -ErrorAction Stop
+                                                $parentProcess = Get-Process -Id $parent -ErrorAction SilentlyContinue
+                                                if ($parentProcess) {
+                                                    Write-Log "Stopped parent process $($parentProcess.Name) (PID: $parent) of process using ${filePath}"
+                                                }
+                                            }
+                                        } catch {
+                                            Write-Log ("Error stopping parent process for PID $($process.Id): {0}" -f $_.Exception.Message)
+                                        }
+                                    }
+                                } catch {
+                                    Write-Log ("Error stopping processes for ${filePath}: {0}" -f $_.Exception.Message)
+                                }
+                            }
+                            
+                            function Backup-And-Quarantine {
+                                param ([string]$filePath)
+                                try {
+                                    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+                                    if (-not $isAdmin) {
+                                        Write-Log "Insufficient permissions to process ${filePath}"
+                                        return
+                                    }
+                                    # Check for file locks
+                                    try {
+                                        $handle = [System.IO.File]::Open($filePath, 'Open', 'Read', 'None')
+                                        $handle.Close()
+                                    } catch {
+                                        Write-Log "File ${filePath} is locked by another process."
+                                        return
+                                    }
+                                    takeown /F $filePath /A | Out-Null
+                                    Write-Log "Took ownership of file: ${filePath}"
+                                    $acl = Get-Acl -Path $filePath
+                                    $acl.SetAccessRuleProtection($true, $false)
+                                    $acl.Access | ForEach-Object { $acl.RemoveAccessRule($_) | Out-Null }
+                                    $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule("Administrators", "FullControl", "Allow")
+                                    $acl.AddAccessRule($adminRule)
+                                    Set-Acl -Path $filePath -AclObject $acl
+                                    Start-Sleep -Milliseconds 500
+                                    Write-Log "Removed all permissions and granted Administrators full control for file: ${filePath}"
+                                    $backupPath = Join-Path -Path $backupFolder -ChildPath ("$(Split-Path $filePath -Leaf)_$(Get-Date -Format 'yyyyMMdd_HHmmss')")
+                                    Copy-Item -Path $filePath -Destination $backupPath -Force -ErrorAction Stop
+                                    Write-Log "Backed up file: ${filePath} to $backupPath"
+                                    $quarantinePath = Join-Path -Path $quarantineFolder -ChildPath (Split-Path $filePath -Leaf)
+                                    Move-Item -Path $filePath -Destination $quarantinePath -Force -ErrorAction Stop
+                                    Write-Log "Quarantined file: ${filePath} to $quarantinePath"
+                                } catch {
+                                    Write-Log ("Failed to backup/quarantine ${filePath}: {0}" -f $_.Exception.Message)
+                                }
+                            }
+                            
+                            function Show-Notification {
+                                param ([string]$message)
+                                try {
+                                    Add-Type -AssemblyName System.Windows.Forms
+                                    $notify = New-Object System.Windows.Forms.NotifyIcon
+                                    $notify.Icon = [System.Drawing.SystemIcons]::Warning
+                                    $notify.Visible = $true
+                                    $notify.ShowBalloonTip(5000, "GShield Antivirus", $message, [System.Windows.Forms.ToolTipIcon]::Warning)
+                                    Start-Sleep -Seconds 5
+                                    $notify.Dispose()
+                                } catch {
+                                    Write-Log ("Failed to show notification: {0}" -f $_.Exception.Message)
+                                }
+                            }
+                            
+                            try {
+                                $semaphore.WaitOne()
+                                $hash = Calculate-FileHash -filePath $filePath
+                                if (-not $hash) { return }
+                                if (Test-Path $localDatabase) {
+                                    $lines = Get-Content $localDatabase -ErrorAction SilentlyContinue
+                                    $scannedFiles = @{}
+                                    foreach ($line in $lines) {
+                                        if ($line -match "^([0-9a-f]{64}),(true|false)$") {
+                                            $scannedFiles[$matches[1]] = [bool]$matches[2]
+                                        }
+                                    }
+                                }
+                                if ($scannedFiles.ContainsKey($hash)) { return }
+                                $isMalicious = Scan-FileWithVirusTotal -fileHash $hash -filePath $filePath
+                                Add-Content -Path $localDatabase -Value "$hash,$(-not $isMalicious)"
+                                if ($isMalicious) {
+                                    Stop-ProcessUsingDLL -filePath $filePath
+                                    Backup-And-Quarantine -filePath $filePath
+                                    Show-Notification -message "Malicious file quarantined: $filePath"
+                                }
+                            } catch {
+                                Write-Log ("Error processing ${filePath}: {0}" -f $_.Exception.Message)
+                            } finally {
+                                $semaphore.Release()
+                            }
+                        } -ArgumentList $file.FullName, $localDatabase, $virusTotalApiKey, $semaphore, $logFile, $backupFolder, $quarantineFolder, $maxRetries, $retryDelaySeconds, $maxFileSizeMB
+                    }
+                } catch {
+                    Write-Log ("Error scanning drive {0}: {1}" -f $root, $_.Exception.Message)
+                }
+            }
+            $jobs | Wait-Job | Receive-Job
+            $jobs | Remove-Job
+            Write-Log "Finished VirusTotal scan."
+        }
+        
+        function Stop-ProcessUsingDLL {
+            param ([string]$filePath)
+            try {
+                $processes = Get-Process | Where-Object { ($_.Modules | Where-Object { $_.FileName -eq $filePath }) }
+                foreach ($process in $processes) {
+                    Stop-Process -Id $process.Id -Force -ErrorAction Stop
+                    Write-Log "Stopped process $($process.Name) (PID: $($process.Id)) using ${filePath}"
+                    try {
+                        $parent = Get-CimInstance -ClassName Win32_Process | Where-Object { $_.ProcessId -eq $process.Id } | Select-Object -ExpandProperty ParentProcessId
+                        if ($parent -and $parent -ne 0) {
+                            Stop-Process -Id $parent -Force -ErrorAction Stop
+                            $parentProcess = Get-Process -Id $parent -ErrorAction SilentlyContinue
+                            if ($parentProcess) {
+                                Write-Log "Stopped parent process $($parentProcess.Name) (PID: $parent) of process using ${filePath}"
+                            }
+                        }
+                    } catch {
+                        Write-Log ("Error stopping parent process for PID $($process.Id): {0}" -f $_.Exception.Message)
+                    }
+                }
+            } catch {
+                Write-Log ("Error stopping processes for ${filePath}: {0}" -f $_.Exception.Message)
+            }
+        }
+        
+        function Backup-And-Quarantine {
+            param ([string]$filePath)
+            try {
+                $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+                if (-not $isAdmin) {
+                    Write-Log "Insufficient permissions to process ${filePath}"
+                    return
+                }
+                # Check for file locks
+                try {
+                    $handle = [System.IO.File]::Open($filePath, 'Open', 'Read', 'None')
+                    $handle.Close()
+                } catch {
+                    Write-Log "File ${filePath} is locked by another process."
+                    return
+                }
+                takeown /F $filePath /A | Out-Null
+                Write-Log "Took ownership of file: ${filePath}"
+                $acl = Get-Acl -Path $filePath
+                $acl.SetAccessRuleProtection($true, $false)
+                $acl.Access | ForEach-Object { $acl.RemoveAccessRule($_) | Out-Null }
+                $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule("Administrators", "FullControl", "Allow")
+                $acl.AddAccessRule($adminRule)
+                Set-Acl -Path $filePath -AclObject $acl
+                Start-Sleep -Milliseconds 500
+                Write-Log "Removed all permissions and granted Administrators full control for file: ${filePath}"
+                $backupPath = Join-Path -Path $backupFolder -ChildPath ("$(Split-Path $filePath -Leaf)_$(Get-Date -Format 'yyyyMMdd_HHmmss')")
+                Copy-Item -Path $filePath -Destination $backupPath -Force -ErrorAction Stop
+                Write-Log "Backed up file: ${filePath} to $backupPath"
+                $quarantinePath = Join-Path -Path $quarantineFolder -ChildPath (Split-Path $filePath -Leaf)
+                Move-Item -Path $filePath -Destination $quarantinePath -Force -ErrorAction Stop
+                Write-Log "Quarantined file: ${filePath} to $quarantinePath"
+            } catch {
+                Write-Log ("Failed to backup/quarantine ${filePath}: {0}" -f $_.Exception.Message)
+            }
+        }
+        
+        function Show-Notification {
+            param ([string]$message)
+            try {
+                Add-Type -AssemblyName System.Windows.Forms
+                $notify = New-Object System.Windows.Forms.NotifyIcon
+                $notify.Icon = [System.Drawing.SystemIcons]::Warning
+                $notify.Visible = $true
+                $notify.ShowBalloonTip(5000, "GShield Antivirus", $message, [System.Windows.Forms.ToolTipIcon]::Warning)
+                Start-Sleep -Seconds 5
+                $notify.Dispose()
+            } catch {
+                Write-Log ("Failed to show notification: {0}" -f $_.Exception.Message)
+            }
+        }
+        
+        function Is-Whitelisted {
+            param ([string]$filePath)
+            foreach ($pattern in $whitelistPatterns) {
+                if ($filePath -like $pattern) {
+                    return $true
+                }
+            }
+            return $false
+        }
+        
+        try {
+            # Start FileSystemWatcher
+            $watchers = Start-FileSystemWatcher
+            # Run initial scans
+            Write-Log "Starting initial scans."
+            Remove-UnsignedDLLs
+            Scan-AllFilesWithVirusTotal
+            Write-Log "Initial scans completed."
+            # Process FileSystemWatcher events
+            while ($true) {
+                if ($eventQueue.Count -gt 0) {
+                    $filePath = $eventQueue.Dequeue()
+                    if (Is-Whitelisted -filePath $filePath) {
+                        Write-Log "Skipping whitelisted file: ${filePath}"
+                        continue
+                    }
+                    try {
+                        $hash = Calculate-FileHash -filePath $filePath
+                        if (-not $hash) { continue }
+                        if (Test-Path $localDatabase) {
+                            $lines = Get-Content $localDatabase -ErrorAction SilentlyContinue
+                            $scannedFiles = @{}
+                            foreach ($line in $lines) {
+                                if ($line -match "^([0-9a-f]{64}),(true|false)$") {
+                                    $scannedFiles[$matches[1]] = [bool]$matches[2]
+                                }
+                            }
+                        }
+                        if ($scannedFiles.ContainsKey($hash)) { continue }
+                        if ($filePath -like "*.dll") {
+                            try {
+                                $cert = Get-AuthenticodeSignature -FilePath $filePath -ErrorAction Stop
+                                if ($cert.Status -ne 'Valid') {
+                                    Write-Log "Found unsigned DLL: ${filePath}"
+                                    Stop-ProcessUsingDLL -filePath $filePath
+                                    Backup-And-Quarantine -filePath $filePath
+                                    Show-Notification -message "Unsigned DLL quarantined: ${filePath}"
+                                    Add-Content -Path $localDatabase -Value "$hash,$false"
+                                    continue
+                                }
+                            } catch {
+                                Write-Log ("Error processing DLL {0}: {1}" -f $filePath, $_.Exception.Message)
+                            }
+                        } else {
+                            Write-Log "Skipping non-DLL file: ${filePath}"
+                        }
+                        $isMalicious = Scan-FileWithVirusTotal -fileHash $hash -filePath $filePath
+                        $scannedFiles[$hash] = -not $isMalicious
+                        Add-Content -Path $localDatabase -Value "$hash,$(-not $isMalicious)"
+                        if ($isMalicious) {
+                            Stop-ProcessUsingDLL -filePath $filePath
+                            Backup-And-Quarantine -filePath $filePath
+                            Show-Notification -message "Malicious file quarantined: ${filePath}"
+                        }
+                    } catch {
+                        Write-Log ("Error processing ${filePath}: {0}" -f $_.Exception.Message)
+                    }
+                }
+                Start-Sleep -Seconds $config.ScanIntervalSeconds
+                Write-Log "Periodic VirusTotal scan initiated"
+                Scan-AllFilesWithVirusTotal
+            }
+        } catch {
+            Write-Log ("Error during scan: {0}" -f $_.Exception.Message)
+        } finally {
+            Get-EventSubscriber | Where-Object { $_.SourceIdentifier -like "FileCreated_*" -or $_.SourceIdentifier -like "FileChanged_*" } | Unregister-Event
+            Get-Job | Remove-Job -Force
+            Remove-Item $lockFile -Force -ErrorAction SilentlyContinue
+            Write-Log "Cleaned up lock file and event subscribers."
+        }
+    } -ArgumentList $logFile, $localDatabase, $virusTotalApiKey, $maxRetries, $retryDelaySeconds, $maxConcurrentScans, $whitelistPatterns, $config, $backupFolder, $quarantineFolder, $maxFileSizeMB, $eventQueue, $maxQueueSize, $lockFile
+    
+    Write-Log "Antivirus script started as a background job with ID $($job.Id)."
+    Write-Log "Logs are being written to $logFile."
+} catch {
+    Write-Log ("Error starting background job: {0}" -f $_.Exception.Message)
+} finally {
+    Remove-Item $lockFile -Force -ErrorAction SilentlyContinue
 }
-
-Register-AntivirusTask
-
-# Compile the C# code
-try {
-    Add-Type -TypeDefinition $sourceCode -Language CSharp -ReferencedAssemblies "System.Net.Http", $jsonAssembly
-}
-catch {
-    Write-Host "Compilation failed: $_"
-    Write-Host "Ensure internet access for Newtonsoft.Json download."
-    exit
-}
-
-# Start system-wide monitoring in silent mode
-
-[AntivirusScanner]::StartSystemMonitoring($true)
+# Exit immediately to allow the calling batch script to continue
+exit
