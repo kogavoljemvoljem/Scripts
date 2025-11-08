@@ -13,6 +13,7 @@ using System.Security.Principal;
 using Microsoft.Win32;
 using System.Security.AccessControl;
 using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
 public class AntivirusScanner
 {
@@ -26,10 +27,46 @@ public class AntivirusScanner
 
     private static readonly string QuarantinePath = @"C:\Quarantine";
     private static readonly string LogPath = @"C:\ProgramData\AntivirusLog.txt";
+    private static readonly string BackupPath = @"C:\ProgramData\Antivirus\Backup";
+    private static readonly string ConfigPath = @"C:\ProgramData\AntivirusConfig.json";
     private static readonly string CirclBaseUrl = "https://hashlookup.circl.lu";
+    private static readonly string VirusTotalApiKey = "YOURVIRUSTOTALAPIKEYHERE";
+    private static readonly string VirusTotalUploadUrl = "https://www.virustotal.com/api/v3/files";
+    private static readonly string VirusTotalAnalysisUrl = "https://www.virustotal.com/api/v3/files/{0}";
     private static readonly List<FileSystemWatcher> watchers = new List<FileSystemWatcher>();
-    private static readonly SemaphoreSlim apiSemaphore = new SemaphoreSlim(1, 1);
+    private static readonly SemaphoreSlim apiSemaphore = new SemaphoreSlim(4, 4);
     private static readonly TimeSpan BehaviorCheckInterval = TimeSpan.FromSeconds(30);
+    private static readonly int MaxRetries = 3;
+    private static readonly int RetryDelaySeconds = 15;
+    private static readonly long MaxFileSizeBytes = 32 * 1024 * 1024;
+    private static Dictionary<string, object> config;
+
+    static AntivirusScanner()
+    {
+        config = new Dictionary<string, object>();
+        config.Add("MaxLogSizeMB", 10);
+        config.Add("ScanIntervalSeconds", 3600);
+    }
+
+    private static readonly string[] WhitelistPatterns = {
+        @"*\Antivirus\Bin\Antivirus.ps1*",
+        @"*\Antivirus\Quarantine*",
+        @"*\Windows\System32*",
+        @"*\Windows\SysWOW64*",
+        @"*\Windows\WinSxS*",
+        @"*\Program Files\Windows Defender*",
+        @"*\Google\Chrome\Application*",
+        @"*\Mozilla Firefox*",
+        @"*\Microsoft\Edge\Application*",
+        @"*\Opera*",
+        @"*\Steam*",
+        @"*\Epic Games*",
+        @"*\Origin*",
+        @"*\Ubisoft*",
+        @"*\Battle.net*",
+        @"*\Users\Admin\AppData\Local\Temp*",
+        @"*\Users\Admin\AppData\Local\Microsoft\Windows\ActionCenterCache*"
+    };
 
     public static void Main(string[] args)
     {
@@ -38,6 +75,16 @@ public class AntivirusScanner
 
         bool silent = args.Length > 0 && args[0].ToLower() == "silent";
         StartSystemMonitoring(silent).GetAwaiter().GetResult();
+    }
+
+    private static void OnFileChanged(object sender, FileSystemEventArgs e)
+    {
+        ScanFileAsync(e.FullPath).GetAwaiter().GetResult();
+    }
+
+    private static void OnFileCreated(object sender, FileSystemEventArgs e)
+    {
+        ScanFileAsync(e.FullPath).GetAwaiter().GetResult();
     }
 
     public static async Task StartSystemMonitoring(bool silent = false)
@@ -50,10 +97,11 @@ public class AntivirusScanner
                 return;
             }
 
-            AddToStartup();
+            LoadConfig();
+            if (!Directory.Exists(QuarantinePath)) Directory.CreateDirectory(QuarantinePath);
+            if (!Directory.Exists(BackupPath)) Directory.CreateDirectory(BackupPath);
 
-            if (!Directory.Exists(QuarantinePath))
-                Directory.CreateDirectory(QuarantinePath);
+            AddToStartup();
 
             foreach (var drive in DriveInfo.GetDrives().Where(d => d.DriveType == DriveType.Fixed && d.IsReady))
             {
@@ -66,8 +114,8 @@ public class AntivirusScanner
                         Filter = "*.*",
                         NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite
                     };
-                    watcher.Changed += async (s, e) => await ScanFileAsync(e.FullPath);
-                    watcher.Created += async (s, e) => await ScanFileAsync(e.FullPath);
+                    watcher.Changed += OnFileChanged;
+                    watcher.Created += OnFileCreated;
                     watcher.EnableRaisingEvents = true;
                     watchers.Add(watcher);
                     Log(string.Format("Monitoring drive: {0}", drive.Name));
@@ -78,7 +126,7 @@ public class AntivirusScanner
                 }
             }
 
-            Log("Real-time system monitoring started with CIRCL Hashlookup. Press Ctrl+C to stop in non-silent mode.");
+            Log("Real-time system monitoring started with VirusTotal and CIRCL. Press Ctrl+C to stop in non-silent mode.");
 
             Log("Performing initial drive scan...");
             foreach (var drive in DriveInfo.GetDrives().Where(d => d.DriveType == DriveType.Fixed && d.IsReady))
@@ -107,6 +155,34 @@ public class AntivirusScanner
         catch (Exception ex)
         {
             Log(string.Format("Error in system monitoring: {0}", ex.Message));
+        }
+    }
+
+    private static void LoadConfig()
+    {
+        if (File.Exists(ConfigPath))
+        {
+            try
+            {
+                string json = File.ReadAllText(ConfigPath);
+                config = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+            }
+            catch (Exception ex)
+            {
+                Log(string.Format("Error loading config: {0}", ex.Message));
+            }
+        }
+        else
+        {
+            try
+            {
+                File.WriteAllText(ConfigPath, JsonConvert.SerializeObject(config));
+                Log("Created default config file at: " + ConfigPath);
+            }
+            catch (Exception ex)
+            {
+                Log(string.Format("Error creating config file: {0}", ex.Message));
+            }
         }
     }
 
@@ -144,7 +220,7 @@ public class AntivirusScanner
     </LogonTrigger>
   </Triggers>
   <Principals>
-    <Principal id=""Author"">
+    <Principal id=""Gorstak"">
       <RunLevel>HighestAvailable</RunLevel>
     </Principal>
   </Principals>
@@ -167,7 +243,7 @@ public class AntivirusScanner
     <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
     <Priority>7</Priority>
   </Settings>
-  <Actions Context=""Author"">
+  <Actions Context=""Gorstak"">
     <Exec>
       <Command>""{0}""</Command>
       <Arguments>silent</Arguments>
@@ -215,11 +291,11 @@ public class AntivirusScanner
         try
         {
             var files = GetFilesSafely(directoryPath);
-            Parallel.ForEach(files, new ParallelOptions { MaxDegreeOfParallelism = 2 }, async file =>
+            Parallel.ForEach(files, new ParallelOptions { MaxDegreeOfParallelism = 2 }, file =>
             {
-                await ScanFileAsync(file);
+                ScanFileAsync(file).GetAwaiter().GetResult();
             });
-            Log(string.Format("Initial scan completed for {0}", directoryPath));
+            Log(string.Format("Initial scan completed for {0}.", directoryPath));
         }
         catch (Exception ex)
         {
@@ -239,49 +315,296 @@ public class AntivirusScanner
                 {
                     files.AddRange(GetFilesSafely(subDir));
                 }
-                catch { } // Skip inaccessible subdirectories
+                catch { }
             }
         }
-        catch { } // Skip inaccessible root directory
+        catch { }
         return files.Where(f => !f.StartsWith(QuarantinePath, StringComparison.OrdinalIgnoreCase));
     }
 
     private static async Task ScanFileAsync(string filePath)
     {
-        if (filePath.Equals(LogPath, StringComparison.OrdinalIgnoreCase)) return; // Skip log file
+        if (filePath.Equals(LogPath, StringComparison.OrdinalIgnoreCase)) return;
 
-        await Task.Run(async () =>
+        try
         {
-            try
+            if (filePath.StartsWith(QuarantinePath, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (IsWhitelisted(filePath))
             {
-                if (filePath.StartsWith(QuarantinePath, StringComparison.OrdinalIgnoreCase))
-                    return;
+                Log(string.Format("Skipping whitelisted file: {0}", filePath));
+                return;
+            }
 
-                string fileHash = ComputeSHA256(filePath);
-                if (string.IsNullOrEmpty(fileHash))
-                    return;
+            string fileHash = ComputeSHA256(filePath);
+            if (string.IsNullOrEmpty(fileHash))
+                return;
 
-                var circlResult = await QueryCirclAsync(fileHash);
+            bool isMalicious = await ScanFileWithVirusTotal(fileHash, filePath);
+            if (isMalicious)
+            {
+                string threatName = "VirusTotal_Malicious";
+                Log(string.Format("Threat detected: {0} ({1})", filePath, threatName));
+                HandleMalware(filePath, threatName);
+                ShowNotification("Malicious file quarantined: " + filePath);
+            }
+            else if (Path.GetExtension(filePath).ToLower() == ".dll" && !IsSignedDLL(filePath))
+            {
+                string threatName = "Unsigned_DLL";
+                Log(string.Format("Unsigned DLL detected: {0}", filePath));
+                HandleMalware(filePath, threatName);
+                ShowNotification("Unsigned DLL quarantined: " + filePath);
+            }
+            else
+            {
+                var circlResult = QueryCircl(filePath);
                 if (circlResult.Trust < 30)
                 {
                     string threatName = string.Format("CIRCL_LowTrust (Score: {0}/100, Sources: {1})", circlResult.Trust, string.Join(", ", circlResult.Sources));
                     Log(string.Format("Threat detected: {0} ({1})", filePath, threatName));
                     HandleMalware(filePath, threatName);
-                }
-                else if (circlResult.Trust == 50)
-                {
-                    Log(string.Format("Unknown file: {0} (CIRCL Score: {1})", filePath, circlResult.Trust));
+                    ShowNotification("Malicious file quarantined: " + filePath);
                 }
                 else
                 {
                     Log(string.Format("File clean: {0} (CIRCL Score: {1})", filePath, circlResult.Trust));
                 }
             }
-            catch (Exception ex)
+        }
+        catch (Exception ex)
+        {
+            Log(string.Format("Error scanning file {0}: {1}", filePath, ex.Message));
+        }
+    }
+
+    private static async Task<bool> ScanFileWithVirusTotal(string hash, string filePath)
+    {
+        for (int i = 0; i < MaxRetries; i++)
+        {
+            bool semaphoreAcquired = false;
+            bool success = false;
+            string errorMessage = null;
+            JObject result = null;
+
+            try
             {
-                Log(string.Format("Error scanning file {0}: {1}", filePath, ex.Message));
+                semaphoreAcquired = apiSemaphore.Wait(30000);
+                string url = string.Format(VirusTotalAnalysisUrl, hash);
+                var request = WebRequest.Create(url);
+                request.Headers.Add("x-apikey", VirusTotalApiKey);
+                using (var response = request.GetResponse())
+                {
+                    using (var stream = response.GetResponseStream())
+                    using (var reader = new StreamReader(stream))
+                    {
+                        string json = reader.ReadToEnd();
+                        result = JObject.Parse(json);
+                        success = true;
+                    }
+                }
             }
-        });
+            catch (WebException ex)
+            {
+                errorMessage = ex.Message;
+                if (ex.Response != null && ((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotFound)
+                {
+                    if (semaphoreAcquired) apiSemaphore.Release();
+                    semaphoreAcquired = false;
+                    return UploadFileToVirusTotal(filePath, hash);
+                }
+            }
+            finally
+            {
+                if (semaphoreAcquired) apiSemaphore.Release();
+            }
+
+            if (success && result != null)
+            {
+                int malicious = result["data"]["attributes"]["last_analysis_stats"]["malicious"].Value<int>();
+                Log(string.Format("VirusTotal result for {0}: {1} malicious detections.", hash, malicious));
+                return malicious > 3;
+            }
+
+            if (errorMessage != null)
+            {
+                Log(string.Format("VirusTotal error for {0}: {1}", hash, errorMessage));
+            }
+
+            if (i < MaxRetries - 1)
+            {
+                await Task.Delay(RetryDelaySeconds * 1000);
+            }
+        }
+        return false;
+    }
+
+    private static bool UploadFileToVirusTotal(string filePath, string hash)
+    {
+        if (new FileInfo(filePath).Length > MaxFileSizeBytes)
+        {
+            Log(string.Format("Cannot upload {0}: File size exceeds {1} MB.", filePath, MaxFileSizeBytes / (1024 * 1024)));
+            return false;
+        }
+
+        bool semaphoreAcquired = false;
+        bool success = false;
+        string errorMessage = null;
+
+        try
+        {
+            semaphoreAcquired = apiSemaphore.Wait(30000);
+            var request = (HttpWebRequest)WebRequest.Create(VirusTotalUploadUrl);
+            request.Method = "POST";
+            request.Headers.Add("x-apikey", VirusTotalApiKey);
+            var boundary = "----------" + DateTime.Now.Ticks.ToString("x");
+            request.ContentType = "multipart/form-data; boundary=" + boundary;
+
+            using (var requestStream = request.GetRequestStream())
+            {
+                string formDataTemplate = "\r\n--" + boundary + "\r\nContent-Disposition: form-data; name=\"{0}\"; filename=\"{1}\"\r\nContent-Type: application/octet-stream\r\n\r\n";
+                string formItem = string.Format(formDataTemplate, "file", Path.GetFileName(filePath));
+                byte[] formItemBytes = System.Text.Encoding.UTF8.GetBytes(formItem);
+                requestStream.Write(formItemBytes, 0, formItemBytes.Length);
+
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                using (FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+                {
+                    while ((bytesRead = fileStream.Read(buffer, 0, buffer.Length)) != 0)
+                    {
+                        requestStream.Write(buffer, 0, bytesRead);
+                    }
+                }
+
+                byte[] boundaryBytes = System.Text.Encoding.UTF8.GetBytes("\r\n--" + boundary + "--\r\n");
+                requestStream.Write(boundaryBytes, 0, boundaryBytes.Length);
+            }
+
+            using (var response = request.GetResponse())
+            {
+                using (var stream = response.GetResponseStream())
+                using (var reader = new StreamReader(stream))
+                {
+                    string json = reader.ReadToEnd();
+                    JObject result = JObject.Parse(json);
+                    string analysisId = result["data"]["id"].Value<string>();
+                    Log(string.Format("Uploaded {0}. Analysis ID: {1}", filePath, analysisId));
+                    success = true;
+
+                    for (int i = 0; i < MaxRetries; i++)
+                    {
+                        bool isMalicious = CheckVirusTotalAnalysis(analysisId);
+                        if (isMalicious) return true;
+                        Thread.Sleep(RetryDelaySeconds * 1000);
+                    }
+                    return false;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            Log(string.Format("Upload error for {0}: {1}", filePath, errorMessage));
+            return false;
+        }
+        finally
+        {
+            if (semaphoreAcquired && success) apiSemaphore.Release();
+        }
+    }
+
+    private static bool CheckVirusTotalAnalysis(string analysisId)
+    {
+        bool semaphoreAcquired = false;
+        try
+        {
+            semaphoreAcquired = apiSemaphore.Wait(30000);
+            string url = "https://www.virustotal.com/api/v3/analyses/" + analysisId;
+            var request = WebRequest.Create(url);
+            request.Headers.Add("x-apikey", VirusTotalApiKey);
+            using (var response = request.GetResponse())
+            {
+                using (var stream = response.GetResponseStream())
+                using (var reader = new StreamReader(stream))
+                {
+                    string json = reader.ReadToEnd();
+                    JObject result = JObject.Parse(json);
+                    if (result["data"]["attributes"]["status"].Value<string>() == "completed")
+                    {
+                        int malicious = result["data"]["attributes"]["stats"]["malicious"].Value<int>();
+                        Log(string.Format("VirusTotal analysis for ID {0}: {1} malicious detections.", analysisId, malicious));
+                        return malicious > 3;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(string.Format("Analysis check error for ID {0}: {1}", analysisId, ex.Message));
+        }
+        finally
+        {
+            if (semaphoreAcquired) apiSemaphore.Release();
+        }
+        return false;
+    }
+
+    private static bool IsSignedDLL(string filePath)
+    {
+        try
+        {
+            var sig = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(filePath);
+            return sig != null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsWhitelisted(string filePath)
+    {
+        foreach (var pattern in WhitelistPatterns)
+        {
+            if (filePath.ToLower().Contains(pattern.ToLower().Replace("*", "")))
+                return true;
+        }
+        return false;
+    }
+
+    private static void ShowNotification(string message)
+    {
+        try
+        {
+            NotifyIcon notify = new NotifyIcon();
+            notify.Icon = System.Drawing.SystemIcons.Warning;
+            notify.Visible = true;
+            notify.ShowBalloonTip(5000, "Antivirus Alert", message, ToolTipIcon.Warning);
+            Thread.Sleep(5000);
+            notify.Visible = false;
+            notify.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Log(string.Format("Notification error: {0}", ex.Message));
+        }
+    }
+
+    private static void Log(string message)
+    {
+        string logMessage = string.Format("{0:yyyy-MM-dd HH:mm:ss} - {1}", DateTime.Now, message);
+        try
+        {
+            if (File.Exists(LogPath) && new FileInfo(LogPath).Length > (long)config["MaxLogSizeMB"] * 1024 * 1024)
+            {
+                string archiveName = string.Format("antivirus_log_{0}.txt", DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+                File.Move(LogPath, Path.Combine(Path.GetDirectoryName(LogPath), archiveName));
+                Log("Rotated log file to " + archiveName);
+            }
+            File.AppendAllText(LogPath, logMessage + Environment.NewLine);
+        }
+        catch { }
     }
 
     private static async Task MonitorProcessesAsync()
@@ -298,22 +621,37 @@ public class AntivirusScanner
                         if (string.IsNullOrEmpty(exePath) || exePath.StartsWith(QuarantinePath, StringComparison.OrdinalIgnoreCase))
                             continue;
 
+                        if (IsWhitelisted(exePath))
+                        {
+                            Log(string.Format("Skipping whitelisted process: {0} (PID: {1})", process.ProcessName, process.Id));
+                            continue;
+                        }
+
                         string hash = ComputeSHA256(exePath);
                         if (string.IsNullOrEmpty(hash))
                             continue;
 
-                        var circlResult = await QueryCirclAsync(hash);
-                        if (circlResult.Trust < 30)
+                        bool isMalicious = await ScanFileWithVirusTotal(hash, exePath);
+                        if (isMalicious)
                         {
-                            string threatName = string.Format("CIRCL_LowTrust (Score: {0}/100, Sources: {1})", circlResult.Trust, string.Join(", ", circlResult.Sources));
+                            string threatName = "VirusTotal_Malicious";
                             Log(string.Format("Malicious process detected: {0} (PID: {1}, Path: {2}, {3})", process.ProcessName, process.Id, exePath, threatName));
                             HandleMalware(exePath, threatName, process);
+                            ShowNotification("Malicious process quarantined: " + exePath);
                         }
-
-                        if (IsSuspiciousProcess(process))
+                        else if (Path.GetExtension(exePath).ToLower() == ".dll" && !IsSignedDLL(exePath))
                         {
+                            string threatName = "Unsigned_DLL";
+                            Log(string.Format("Unsigned DLL process detected: {0} (PID: {1}, Path: {2})", process.ProcessName, process.Id, exePath));
+                            HandleMalware(exePath, threatName, process);
+                            ShowNotification("Unsigned DLL process quarantined: " + exePath);
+                        }
+                        else if (IsSuspiciousProcess(process))
+                        {
+                            string threatName = "Suspicious_Behavior";
                             Log(string.Format("Suspicious behavior detected in process: {0} (PID: {1})", process.ProcessName, process.Id));
-                            HandleMalware(exePath, "Suspicious_Behavior", process);
+                            HandleMalware(exePath, threatName, process);
+                            ShowNotification("Suspicious process quarantined: " + exePath);
                         }
                     }
                     catch { }
@@ -341,20 +679,45 @@ public class AntivirusScanner
                         string path = runKey.GetValue(valueName) != null ? runKey.GetValue(valueName).ToString() : null;
                         if (!string.IsNullOrEmpty(path) && File.Exists(path) && !path.StartsWith(QuarantinePath, StringComparison.OrdinalIgnoreCase))
                         {
+                            if (IsWhitelisted(path))
+                            {
+                                Log(string.Format("Skipping whitelisted registry entry: {0} ({1})", valueName, path));
+                                continue;
+                            }
+
                             string hash = ComputeSHA256(path);
                             if (string.IsNullOrEmpty(hash))
                                 continue;
 
-                            var circlResult = await QueryCirclAsync(hash);
-                            if (circlResult.Trust < 30)
+                            bool isMalicious = await ScanFileWithVirusTotal(hash, path);
+                            if (isMalicious)
                             {
-                                string threatName = string.Format("CIRCL_LowTrust (Score: {0}/100, Sources: {1})", circlResult.Trust, string.Join(", ", circlResult.Sources));
+                                string threatName = "VirusTotal_Malicious";
                                 Log(string.Format("Malicious persistence detected: {0} ({1})", path, threatName));
                                 HandleMalware(path, threatName);
                                 try
                                 {
+                                    runKey.Close();
+                                    runKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
                                     runKey.DeleteValue(valueName);
                                     Log(string.Format("Removed malicious registry entry: {0}", valueName));
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log(string.Format("Failed to remove registry entry {0}: {1}", valueName, ex.Message));
+                                }
+                            }
+                            else if (Path.GetExtension(path).ToLower() == ".dll" && !IsSignedDLL(path))
+                            {
+                                string threatName = "Unsigned_DLL";
+                                Log(string.Format("Unsigned DLL in registry: {0} ({1})", path, threatName));
+                                HandleMalware(path, threatName);
+                                try
+                                {
+                                    runKey.Close();
+                                    runKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+                                    runKey.DeleteValue(valueName);
+                                    Log(string.Format("Removed unsigned DLL registry entry: {0}", valueName));
                                 }
                                 catch (Exception ex)
                                 {
@@ -407,14 +770,33 @@ public class AntivirusScanner
             }
             catch (Exception ex)
             {
-                Log(string.Format("Failed to terminate process: {0} (PID: {1}): {2}", process.ProcessName, process.Id, ex.Message));
+                Log(string.Format("Failed to terminate process for {0}: {1}", filePath, ex.Message));
             }
         }
 
         try
         {
-            string fileName = Path.GetFileName(filePath);
-            string quarantineFile = Path.Combine(QuarantinePath, string.Format("{0}_{1}_{2}", threatName, DateTime.Now.Ticks, fileName));
+            if (!File.Exists(filePath))
+            {
+                Log(string.Format("File {0} no longer exists.", filePath));
+                return;
+            }
+
+            try
+            {
+                using (File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None)) { }
+            }
+            catch
+            {
+                Log(string.Format("File {0} is locked by another process.", filePath));
+                return;
+            }
+
+            string backupPath = Path.Combine(BackupPath, string.Format("{0}_{1}", Path.GetFileName(filePath), DateTime.Now.ToString("yyyyMMdd_HHmmss")));
+            File.Copy(filePath, backupPath, true);
+            Log(string.Format("Backed up file: {0} to {1}", filePath, backupPath));
+
+            string quarantineFile = Path.Combine(QuarantinePath, string.Format("{0}_{1}_{2}", threatName, DateTime.Now.Ticks, Path.GetFileName(filePath)));
             File.Move(filePath, quarantineFile);
             Log(string.Format("Quarantined: {0} to {1}", filePath, quarantineFile));
 
@@ -455,15 +837,20 @@ public class AntivirusScanner
         }
     }
 
-    private static async Task<CirclResult> QueryCirclAsync(string hash)
+    private static CirclResult QueryCircl(string filePath)
     {
-        await apiSemaphore.WaitAsync();
+        bool semaphoreAcquired = false;
         try
         {
+            string hash = ComputeSHA256(filePath);
+            if (string.IsNullOrEmpty(hash))
+                return new CirclResult { Trust = 50, Sources = new List<string>() };
+
+            semaphoreAcquired = apiSemaphore.Wait(30000);
             string url = string.Format("{0}/lookup/sha256/{1}", CirclBaseUrl, hash);
             using (var webClient = new WebClient())
             {
-                string json = await webClient.DownloadStringTaskAsync(new Uri(url));
+                string json = webClient.DownloadString(new Uri(url));
                 var jObject = JObject.Parse(json);
                 var trust = jObject["hashlookup:trust"] != null ? jObject["hashlookup:trust"].Value<int>() : 50;
                 var sources = jObject["sources"] != null ? jObject["sources"].Values<string>().ToList() : new List<string>();
@@ -472,23 +859,13 @@ public class AntivirusScanner
         }
         catch (Exception ex)
         {
-            Log(string.Format("CIRCL API error for {0}: {1}", hash, ex.Message));
+            Log(string.Format("CIRCL API error for {0}: {1}", filePath, ex.Message));
+            return new CirclResult { Trust = 50, Sources = new List<string>() };
         }
         finally
         {
-            apiSemaphore.Release();
+            if (semaphoreAcquired) apiSemaphore.Release();
         }
-        return new CirclResult { Trust = 50, Sources = new List<string>() };
-    }
-
-    private static void Log(string message)
-    {
-        string logMessage = string.Format("{0:yyyy-MM-dd HH:mm:ss} - {1}", DateTime.Now, message);
-        try
-        {
-            File.AppendAllText(LogPath, logMessage + Environment.NewLine);
-        }
-        catch { }
     }
 
     private class CirclResult
