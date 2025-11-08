@@ -49,23 +49,12 @@ public class AntivirusScanner
     }
 
     private static readonly string[] WhitelistPatterns = {
-        @"*\Antivirus\Bin\Antivirus.ps1*",
-        @"*\Antivirus\Quarantine*",
+        @"*\Antivirus.exe",
+        @"*\Quarantine*",
         @"*\Windows\System32*",
         @"*\Windows\SysWOW64*",
         @"*\Windows\WinSxS*",
-        @"*\Program Files\Windows Defender*",
-        @"*\Google\Chrome\Application*",
-        @"*\Mozilla Firefox*",
-        @"*\Microsoft\Edge\Application*",
-        @"*\Opera*",
-        @"*\Steam*",
-        @"*\Epic Games*",
-        @"*\Origin*",
-        @"*\Ubisoft*",
-        @"*\Battle.net*",
-        @"*\Users\Admin\AppData\Local\Temp*",
-        @"*\Users\Admin\AppData\Local\Microsoft\Windows\ActionCenterCache*"
+        @"*\Program Files\Windows Defender*"
     };
 
     public static void Main(string[] args)
