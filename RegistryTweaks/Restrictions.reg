@@ -152,6 +152,16 @@ Windows Registry Editor Version 5.00
 "Description"=""
 "SaferFlags"=dword:00000000
 
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\safer\CodeIdentifiers\Paths\{00000000-0000-0000-0000-000000000007}]
+"ItemData"="processid"
+"Description"=""
+"SaferFlags"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\safer\CodeIdentifiers\Paths\{00000000-0000-0000-0000-000000000008}]
+"ItemData"="quitinfo"
+"Description"=""
+"SaferFlags"=dword:00000000
+
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\SRPV2]
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\SrpV2\Appx]
