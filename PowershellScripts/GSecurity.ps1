@@ -64,17 +64,53 @@ function Kill-Process-And-Parent {
     } catch {}
 }
 
+function Test-IPInRange {
+    param (
+        [string]$IP,
+        [string]$CIDR
+    )
+    $ipAddress = [System.Net.IPAddress]::Parse($IP)
+    $network = $CIDR -split '/'
+    $networkAddress = [System.Net.IPAddress]::Parse($network[0])
+    $subnetMask = [System.Net.IPAddress]::Parse((Convert-CIDRToSubnetMask -CIDR $network[1]))
+    $ipBytes = $ipAddress.GetAddressBytes()
+    $networkBytes = $networkAddress.GetAddressBytes()
+    $maskBytes = $subnetMask.GetAddressBytes()
+    $result = $true
+    for ($i = 0; $i -lt $ipBytes.Length; $i++) {
+        if (($ipBytes[$i] -band $maskBytes[$i]) -ne $networkBytes[$i]) {
+            $result = $false
+            break
+        }
+    }
+    return $result
+}
+
+function Convert-CIDRToSubnetMask {
+    param ([int]$CIDR)
+    $binaryMask = ("1" * $CIDR + "0" * (32 - $CIDR)).ToCharArray()
+    $mask = [System.Net.IPAddress]::Parse((($binaryMask -join '').Insert(8, ".").Insert(17, ".").Insert(26, ".") -replace '(.{8})', '$1.'))
+    return $mask
+}
+
+# Kill-Rootkits
 function Kill-Rootkits {
     $Safe = @("System","svchost","lsass","services","wininit","winlogon","explorer","taskhostw","dwm","spoolsv")
-    $Procs = Get-NetTCPConnection | Where-Object { $_.RemoteAddress -like '192.168.*' -or $_.RemoteAddress -like '172.16.*' -or $_.RemoteAddress -like '10.*' -or $_.RemoteAddress -like '127.*' } | ForEach-Object { $Procs[$_.OwningProcess] = $true }
+    $SuspiciousCIDRs = @("208.95.0.0/16", "208.97.0.0/16", "65.9.0.0/16", "127.0.0.0/16", "192.68.0.0/16", "10.0.0.0/16", "52.109.0.0/16", "2.16.0.0/16", "2.18.0.0/16", "20.82.0.0/16", "0.0.0.0/16", "172.16.0.0/16", "20.190.0.0/16", "135.236.0.0/16", "23.32.0.0/16", "23.35.0.0/16", "40.69.0.0/16", "51.124.0.0/16", "194.36.0.0/16", "2.22.89.0/24")
+    $Procs = Get-NetTCPConnection | Where-Object { 
+        $SuspiciousCIDRs | ForEach-Object { Test-IPInRange -IP $_.RemoteAddress -CIDR $_ } | Where-Object { $_ } 
+    } | ForEach-Object { $Procs[$_.OwningProcess] = $true }
     foreach ($PID in $Procs.Keys) {
         $Proc = Get-Process -Id $PID -ErrorAction SilentlyContinue
-        if ($Safe -notcontains $Proc.ProcessName) { Stop-Process -Id $PID -Force -ErrorAction SilentlyContinue; Write-Host "Killed $($Proc.ProcessName)" }
+        if ($Safe -notcontains $Proc.ProcessName) { 
+            Stop-Process -Id $PID -Force -ErrorAction SilentlyContinue; 
+            Write-Host "Killed $($Proc.ProcessName) (PID $PID)" 
+        }
     }
 }
 
 function Start-ProcessKiller {
-        $badNames = @("mimikatz", "", "procdump", "mimilib", "pypykatz")
+        $badNames = @("mimikatz", "procdump", "mimilib", "pypykatz", "exodium", "ovium")
         foreach ($name in $badNames) {
             Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
         }
@@ -105,36 +141,27 @@ function Detect-And-Terminate-Overlays {
 
 function Start-StealthKiller {
     while ($true) {
-        # Kill unsigned or hidden-attribute processes
         Get-CimInstance Win32_Process | ForEach-Object {
             $exePath = $_.ExecutablePath
             if ($exePath -and (Test-Path $exePath)) {
                 $isHidden = (Get-Item $exePath).Attributes -match "Hidden"
                 $sigStatus = (Get-AuthenticodeSignature $exePath).Status
                 if ($isHidden -or $sigStatus -ne 'Valid') {
-                    try {
-                        Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
-                        Write-Host "Killed unsigned/hidden-attribute process: $exePath" "Warning"
-                    } catch {}
+                    Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+                    Write-Host "Killed unsigned/hidden process: $exePath" -Level Warning
                 }
             }
         }
-
-        # Kill stealthy processes (present in WMI but not in tasklist)
         $visible = tasklist /fo csv | ConvertFrom-Csv | Select-Object -ExpandProperty "PID"
         $all = Get-WmiObject Win32_Process | Select-Object -ExpandProperty ProcessId
         $hidden = Compare-Object -ReferenceObject $visible -DifferenceObject $all | Where-Object { $_.SideIndicator -eq "=>" }
-
         foreach ($pid in $hidden) {
-            try {
-                $proc = Get-Process -Id $pid.InputObject -ErrorAction SilentlyContinue
-                if ($proc) {
-                    Stop-Process -Id $pid.InputObject -Force -ErrorAction SilentlyContinue
-                    Write-Host "Killed stealthy (tasklist-hidden) process: $($proc.ProcessName) (PID $($pid.InputObject))" "Error"
-                }
-            } catch {}
+            $proc = Get-Process -Id $pid.InputObject -ErrorAction SilentlyContinue
+            if ($proc) {
+                Stop-Process -Id $pid.InputObject -Force -ErrorAction SilentlyContinue
+                Write-Host "Killed stealthy process: $($proc.ProcessName) (PID $($pid.InputObject))" -Level Error
+            }
         }
-
         Start-Sleep -Seconds 5
     }
 }
