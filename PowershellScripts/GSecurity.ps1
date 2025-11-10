@@ -209,14 +209,104 @@ function Monitor-XSS {
     }
 }
 
-Start-Job -ScriptBlock {
-    while ($true) {
-        Kill-Rootkits
-        Start-ProcessKiller
-	Kill-Connections
-        Detect-And-Terminate-Keyloggers
-        Detect-And-Terminate-Overlays
-        Start-StealthKiller
-        Monitor-XSS
+# Command-line patterns to block
+$BlockedCmdPatterns = @(
+    "\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}", # GUID
+    "\.dll\b", # DLL references
+    "QuitInfo", # Matches /QuitInfo or QuitInfo in any part of the string
+    "Processid" # Matches /Processid or Processid in any part of the string
+)
+
+$BlockedCertSubject = "Martin Tofall"
+
+function Test-CommandLinePattern {
+    param (
+        [string]$CommandLine
+    )
+    if ([string]::IsNullOrEmpty($CommandLine)) {
+        return $false
     }
+    foreach ($pattern in $BlockedCmdPatterns) {
+        if ($CommandLine -match $pattern) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Test-CertificateSubject {
+    param (
+        [string]$Path
+    )
+    try {
+        if (-not (Test-Path $Path)) {
+            return $false
+        }
+        $cert = Get-AuthenticodeSignature -FilePath $Path
+        if ($cert -and $cert.Status -eq "Valid" -and $cert.SignerCertificate.Subject -like "*$BlockedCertSubject*") {
+            return $true
+        }
+        return $false
+    } catch {
+        return $false
+    }
+}
+
+function Start-ProcessMonitoring {
+    try {
+        $query = "SELECT * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_Process'"
+        Register-WmiEvent -Query $query -SourceIdentifier "ProcessCreation" -Action {
+            try {
+                $target = $Event.SourceEventArgs.NewEvent.TargetInstance
+                $name = $target.Name
+                $commandLine = $target.CommandLine
+                $exePath = $target.ExecutablePath
+                $pid = [uint32]$target.ProcessId
+                $reason = ""
+
+                if (Test-CommandLinePattern -CommandLine $commandLine) {
+                    $reason = "command-line pattern in `"$commandLine`""
+                } elseif ($exePath -and (Test-CertificateSubject -Path $exePath)) {
+                    $reason = "certificate contains `"$BlockedCertSubject`""
+                }
+
+                if ($reason) {
+                    Write-Host "[BLOCK] $name (PID $pid) - $reason"
+                    try {
+                        Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+                        Write-Host "[KILLED] PID $pid"
+                    } catch {
+                        Write-Host "[KILL FAIL] PID $pid : $_"
+                    }
+                }
+            } catch {
+                Write-Host "[ERROR] Process event: $_"
+            }
+        } | Out-Null
+        Write-Host "WMI process monitoring active."
+    } catch {
+        Write-Host "[ERROR] Starting process monitoring: $_"
+    }
+}
+
+# Start monitoring and keep the script running
+Start-Job -ScriptBlock {
+try {
+    Kill-Rootkits
+    Start-ProcessKiller
+	Kill-Connections
+    Detect-And-Terminate-Keyloggers
+    Detect-And-Terminate-Overlays
+    Start-StealthKiller
+    Monitor-XSS
+    Start-ProcessMonitoring
+    Write-Host "Process monitoring active. Press Ctrl+C to stop."
+    while ($true) {
+        Start-Sleep -Seconds 10
+    }
+} catch {
+    Write-Host "[ERROR] Script startup: $_"
+} finally {
+    Unregister-Event -SourceIdentifier "ProcessCreation" -ErrorAction SilentlyContinue
+}
 }
