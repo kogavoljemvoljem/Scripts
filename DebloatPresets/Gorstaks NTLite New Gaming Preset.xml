@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Preset isAutoSaved="false" xmlns="urn:schemas-nliteos-com:pn.v1">
-	<Date>11/05/2025 13:11:19</Date>
+	<Date selected="11/05/2025 13:11:19">11/05/2025 13:11:19</Date>
 	<AppInfo>
 		<Version>2025.10.10649</Version>
 		<Licensed>Yes</Licensed>
@@ -319,7 +319,6 @@
 		<c>lpasvc 'Local Profile Assistant Service'</c>
 		<c>lusrmgr32 'Local Users and Groups Manager - 32 bit'</c>
 		<c>lxss 'Windows Subsystem for Linux'</c>
-		<c>mail 'Windows Mail'</c>
 		<c>manifestbackup 'Manifest Backup (WinSxS\Backup)'</c>
 		<c>mapcontrol 'Map Control'</c>
 		<c>mcmsvc 'Mobile Connectivity Management'</c>
@@ -439,9 +438,7 @@
 		<c>performancerecorder 'Windows Performance Recorder'</c>
 		<c>perftools 'Performance CMD Tools for Tracing'</c>
 		<c>phonesvc 'Phone Service'</c>
-		<c>photocodec 'Photo codec'</c>
 		<c>photocodec32 'Photo codec - 32 bit'</c>
-		<c>photoviewer 'Photo Viewer'</c>
 		<c>photoviewer32 'Photo Viewer - 32 bit'</c>
 		<c>pickerhost32 'File Picker UI Host - 32 bit'</c>
 		<c>picturepassword 'Picture password'</c>
@@ -450,7 +447,6 @@
 		<c>pla 'Performance Logs and Alerts'</c>
 		<c>pluton 'Microsoft Pluton security processor'</c>
 		<c>pos 'Point of Service (POS)'</c>
-		<c>powershelldsc 'Desired State Configuration (DSC)'</c>
 		<c>powershellise32 'PowerShell ISE - 32 bit'</c>
 		<c>print3d32 'Print 3D - 32 bit'</c>
 		<c>printmgmt 'Print Management'</c>
@@ -577,7 +573,6 @@
 		<c>winrm 'Windows Remote Management (WS-Management)'</c>
 		<c>winsat 'Windows System Assessment Tool (WinSAT)'</c>
 		<c>winsxs 'Windows Component Store (WinSxS)'</c>
-		<c>wmicommandlineutility 'Windows Management Instrumentation - Command line utility (WMIC)'</c>
 		<c>wpdbusenum 'Portable Device Enumerator Service'</c>
 		<c>wuqisvc 'Microsoft Usage and Quality Insights'</c>
 		<c>ztdns 'Zero Trust DNS'</c>
