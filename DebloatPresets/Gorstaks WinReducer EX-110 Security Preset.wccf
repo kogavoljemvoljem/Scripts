@@ -3,7 +3,7 @@
 <Packages>
   <WinReducerEX>110</WinReducerEX>
   <Version>v3.9.8.0</Version>
-  <Date>Thu 06 Nov 2025 1:39:58 PM</Date>
+  <Date>Mon 10 Nov 2025 12:18:19 PM</Date>
   <Components>
     <Element Category="Appearance" Name="Activate Desktop Context Menu" Selected="false" Value="" />
     <Element Category="Appearance" Name="Safe Mode" Selected="false" Value="" />
@@ -1443,8 +1443,8 @@
     <Element Category="Optimizations" Name="Windows - WinSXS Backup Folder Cleanup (boot.wim)" Selected="true" />
     <Element Category="Optimizations" Name="Windows - WinSXS Backup Folder Cleanup (install.wim)" Selected="true" />
     <Element Category="Optimizations" Name="EXPERT - Deep Cleanup" Selected="true" />
-    <Element Category="Optimizations" Name="EXPERT - Net Framework Complete Cleanup" Selected="true" Value="true" Other="true" />
-    <Element Category="Optimizations" Name="EXPERT - Net Framework Light Cleanup" Selected="true" />
+    <Element Category="Optimizations" Name="EXPERT - Net Framework Complete Cleanup" Selected="false" Value="" Other="" />
+    <Element Category="Optimizations" Name="EXPERT - Net Framework Light Cleanup" Selected="false" />
     <Element Category="Optimizations" Name="EXPERT - Windows Updates Files Cleanup (Complete)" Selected="true" Value="" />
     <Element Category="Optimizations" Name="EXPERT - Windows Updates Files Cleanup (Light)" Selected="true" Value="" />
     <Element Category="Optimizations" Name="EXPERT - WinSXS Folder Cleanup (boot.wim)" Selected="true" />
