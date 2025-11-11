@@ -5,19 +5,19 @@ Windows Registry Editor Version 5.00
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\BackgroundModel\BackgroundAudioPolicy]
 "AllowHeadlessExecution"=dword:00000001
 "AllowMultipleBackgroundTasks"=dword:00000001
-"InactivityTimeoutMs"=dword:00000000Windows Registry Editor Version 5.00
+"InactivityTimeoutMs"=dword:00000000
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows]
 "DesktopHeapLogging"=dword:00000000
 "DwmInputUsesIoCompletionPort"=dword:00000000
 "EnableDwmInputProcessing"=dword:00000000
-Windows Registry Editor Version 5.00
+
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Video\{DEB039CC-B704-4F53-B43E-9DD4432FA2E9}\0000]
 "PerfLevelSrc"=dword:00003322
 "PowerMizerEnable"=dword:00000001
 "PowermizerLevel"=dword:00000001
-"PowermizerLevelAC"=dword:00000001Windows Registry Editor Version 5.00
+"PowermizerLevelAC"=dword:00000001
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power]
 "ExitLatency"=dword:00000001
@@ -63,7 +63,7 @@ Windows Registry Editor Version 5.00
 "MaximumDynamicBacklog"=dword:00001000
 "DynamicBacklogGrowthDelta"=dword:00000010
 "BufferMultiplier"=dword:00000400
-"KeepAliveInterval"=dword:00000001Windows Registry Editor Version 5.00
+"KeepAliveInterval"=dword:00000001
 
 ; Autotuning Internet Speed and making it persistent 
 
@@ -95,14 +95,14 @@ Windows Registry Editor Version 5.00
 "Application DSCP Marking Request"="Allowed"
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\TCPIP\v6Transition]
-"TcpAutotuningLevel"=dword:00000003Windows Registry Editor Version 5.00
+"TcpAutotuningLevel"=dword:00000003
 
 ;BITS
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\BITS]
 "EnablePeercaching"=dword:00000000
 "DisablePeerCachingClient"=dword:00000001
-"DisablePeerCachingServer"=dword:00000001Windows Registry Editor Version 5.00
+"DisablePeerCachingServer"=dword:00000001
 
 ; branch cache
 
@@ -114,29 +114,29 @@ Windows Registry Editor Version 5.00
 "DisableLargeMtu"=dword:00000000
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\BITS]
-"DisableBranchCache"=dword:00000001Windows Registry Editor Version 5.00
+"DisableBranchCache"=dword:00000001
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\NcdAutoSetup\Private]
 "AutoSetup"=dword:00000000
 
-Windows Registry Editor Version 5.00
+
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\icssvc\Settings]
 "PeerlessTimeoutEnabled"=dword:00000000
 "PublicConnectionTimeout"=dword:000000120
 
-Windows Registry Editor Version 5.00
+
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\NDIS\Parameters]
 "DefaultPnPCapabilities"=dword:00000024
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters]
-"DisableSmartNameResolution"=dword:00000001Windows Registry Editor Version 5.00
+"DisableSmartNameResolution"=dword:00000001
 
 ; Minimum amount of hops for a packet to be considered having internet connection, in our case that is literally just 2 hops to our VPS endpoint.
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\services\NlaSvc\Parameters\Internet]
 "EnableActiveProbing"=dword:00000000
-"MinimumInternetHopCount"=dword:00000002Windows Registry Editor Version 5.00
+"MinimumInternetHopCount"=dword:00000002
 
 ;Unsigned Files
 
@@ -161,7 +161,7 @@ Windows Registry Editor Version 5.00
 [HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\Associations]
 "LowRiskFileTypes"=".zip;.rar;.nfo;.txt;.exe;.bat;.com;.cmd;.reg;.msi;.htm;.html;.gif;.bmp;.jpg;.avi;.mpg;.mpeg;.mov;.mp3;.m3u;.wav;"
 "ModRiskFileTypes"=".bat;.exe;.reg;.vbs;.chm;.msi;.js;.cmd"
-Windows Registry Editor Version 5.00
+
 
 ;QoS
 
@@ -183,10 +183,10 @@ Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Psched\UserPriorityMapping]
 "ServiceTypeGuaranteed"=dword:00000005
-"ServiceTypeNetworkControl"=dword:00000007Windows Registry Editor Version 5.00
+"ServiceTypeNetworkControl"=dword:00000007
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Peernet]
-"Disabled"=dword:00000001Windows Registry Editor Version 5.00
+"Disabled"=dword:00000001
 
 ;DNS service parameter
 
@@ -207,7 +207,7 @@ Windows Registry Editor Version 5.00
 "MaxCacheTtl"=dword:00000001
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters]
-"MaximumUdpPacketSize"=dword:00001300Windows Registry Editor Version 5.00
+"MaximumUdpPacketSize"=dword:00001300
 
 [HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings]
 "CertificateRevocation"=dword:00000001
@@ -360,7 +360,7 @@ Windows Registry Editor Version 5.00
 "180E"=dword:00000003
 "2301"=dword:00000003
 "1004"=dword:00000000
-"1802"=dword:00000000Windows Registry Editor Version 5.00
+"1802"=dword:00000000
 
 ;IPv6 Fix for Xbox Live Gaming
 
@@ -382,7 +382,7 @@ Windows Registry Editor Version 5.00
 "Teredo_State"="Enterprise Client"
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters]
-"DisabledComponents"=dword:00000000Windows Registry Editor Version 5.00
+"DisabledComponents"=dword:00000000
 
 ;Low-Risk file type
 
@@ -402,7 +402,7 @@ Windows Registry Editor Version 5.00
 "LowRiskFileTypes"=".zip;.rar;.nfo;.txt;.exe;.bat;.com;.cmd;.reg;.msi;.htm;.html;.gif;.bmp;.jpg;.avi;.mpg;.mpeg;.mov;.mp3;.m3u;.msu;.wav;"
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost\Download]
-"CheckExeSignatures"="no"Windows Registry Editor Version 5.00
+"CheckExeSignatures"="no"
 ;Miracast
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\NetworkProvider]
@@ -428,11 +428,11 @@ Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\PolicyManager\default\WirelessDisplay\AllowProjectionToPC]
 "value"=dword:00000001
-Windows Registry Editor Version 5.00
+
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Network\NewNetworkWindowOff]
 
-Windows Registry Editor Version 5.00
+
 
 ; NLA Parameters
 ; We solely depend on passive polling so we don't require to pass nlasvc and corresponding msft address through firewall/qos. Assuming this also quickens the process by skipping active probes.
@@ -455,7 +455,7 @@ Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\PolicyManager\default\Connectivity\DisallowNetworkConnectivityActiveTests]
 "value"=dword:00000001
-Windows Registry Editor Version 5.00
+
 
 ;Peernet
 
@@ -476,17 +476,17 @@ Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Peernet]
 "Disabled"=dword:00000001
-Windows Registry Editor Version 5.00
+
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\RasMan\PPP]
 "RestartTimer"=dword:00000000
 "ForceEncryptedData"=dword:00000001
 "ForceEncryptedPassword"=dword:00000002
-"SecureVPN"=dword:00000001Windows Registry Editor Version 5.00
+"SecureVPN"=dword:00000001
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\services\NDIS\Parameters]
 "RssBaseCpu"=dword:00000000
-"MaxNumRssCpus"=dword:00000001Windows Registry Editor Version 5.00
+"MaxNumRssCpus"=dword:00000001
 
 ;Network Settings for Melody 1x.0y (applied to 12.07.xx,13.07.xx and 14.06.xx)
 
@@ -628,7 +628,7 @@ Windows Registry Editor Version 5.00
 "AutoDetect"=dword:00000000
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\UDP\Parameters]
-"EnableUDPFastSend"=dword:00000001Windows Registry Editor Version 5.00
+"EnableUDPFastSend"=dword:00000001
 
 ;TCP-IP Priority
 
@@ -638,10 +638,10 @@ Windows Registry Editor Version 5.00
 "NetbtPriority"=dword:00000007
 "HostsPriority"=dword:00000005
 "Class"=dword:00000008
-Windows Registry Editor Version 5.00
+
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WcmSvc\CellularFailover]
-"AllowFailover"=dword:00000000Windows Registry Editor Version 5.00
+"AllowFailover"=dword:00000000
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\WebClient\Parameters]
 "FileSizeLimitInBytes"=dword:ffffffff
@@ -650,7 +650,7 @@ Windows Registry Editor Version 5.00
 "SendReceiveTimeoutInSec"=dword:0000000f
 "ServerNotFoundCacheLifeTimeInSec"=dword:0000000f
 "ServiceDebug"=dword:00000000
-Windows Registry Editor Version 5.00
+
 
 ;Wi-Fi Connection
 
@@ -693,7 +693,7 @@ Windows Registry Editor Version 5.00
 "value"=dword:00000000
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WlanSvc\AnqpCache]
-"OsuRegistrationStatus"=dword:00000000Windows Registry Editor Version 5.00
+"OsuRegistrationStatus"=dword:00000000
 
 ;Winsock
 
