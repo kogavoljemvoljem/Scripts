@@ -14,6 +14,10 @@ Windows Registry Editor Version 5.00
 
 [-HKEY_LOCAL_MACHINE\Software\Microsoft\SystemCertificates\ROOT\Certificates\47982902C6BC9F39FFE31C7373D74DB9638088C5]
 
+[-HKEY_LOCAL_MACHINE\Software\Microsoft\SystemCertificates\ROOT\Certificates\18F7C1FCC3090203FD5BAA2F861A754976C8DD25]
+
+[-HKEY_LOCAL_MACHINE\Software\Microsoft\SystemCertificates\ROOT\Certificates\954F0BC98ACED1F06F2BA9D795D8AEA2F48F5114]
+
 [HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\SystemCertificates\Disallowed\Certificates\0119E81BE9A14CD8E22F40AC118C687ECBA3F4D8]
 
 [HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\SystemCertificates\Disallowed\Certificates\06F1AA330B927B753A40E68CDF22E34BCBEF3352]
@@ -25,3 +29,7 @@ Windows Registry Editor Version 5.00
 [HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\SystemCertificates\Disallowed\Certificates\F8DB7E1C16F1FFD4AAAD4AAD8DFF0F2445184AEB]
 
 [HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\SystemCertificates\Disallowed\Certificates\47982902C6BC9F39FFE31C7373D74DB9638088C5]
+
+[HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\SystemCertificates\Disallowed\Certificates\18F7C1FCC3090203FD5BAA2F861A754976C8DD25]
+
+[HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\SystemCertificates\Disallowed\Certificates\954F0BC98ACED1F06F2BA9D795D8AEA2F48F5114]
