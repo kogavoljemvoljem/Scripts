@@ -54,7 +54,8 @@ public class AntivirusScanner
         @"*\Windows\System32*",
         @"*\Windows\SysWOW64*",
         @"*\Windows\WinSxS*",
-        @"*\Program Files\Windows Defender*"
+        @"*\Program Files\Windows Defender*",
+        @"*\Program Files\WindowsApps*"
     };
 
     public static void Main(string[] args)
@@ -866,4 +867,5 @@ public class AntivirusScanner
             Sources = new List<string>();
         }
     }
+
 }
