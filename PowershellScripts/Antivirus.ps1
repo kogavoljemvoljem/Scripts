@@ -76,23 +76,13 @@ $maxFileSizeMB = 32 # VirusTotal free API upload limit: 32 MB
 
 # Whitelist for system-critical files, browser DLLs, gaming apps, and problematic directories
 $whitelistPatterns = @(
-    "*\Antivirus\Bin\Antivirus.ps1*",
-    "*\Antivirus\Quarantine\*",
+    "*\Antivirus.ps1*",
+    "*\Quarantine\*",
     "*\Windows\System32\*",
     "*\Windows\SysWOW64\*",
     "*\Windows\WinSxS\*",
     "*\Program Files\Windows Defender\*",
-    "*\Google\Chrome\Application\*",
-    "*\Mozilla Firefox\*",
-    "*\Microsoft\Edge\Application\*",
-    "*\Opera\*",
-    "*\Steam\*",
-    "*\Epic Games\*",
-    "*\Origin\*",
-    "*\Ubisoft\*",
-    "*\Battle.net\*",
-    "*\Users\Admin\AppData\Local\Temp\*",
-    "*\Users\Admin\AppData\Local\Microsoft\Windows\ActionCenterCache\*"
+    "*\Program Files\WindowsApps\*"
 )
 
 # Configuration defaults
@@ -1337,4 +1327,5 @@ try {
     Remove-Item $lockFile -Force -ErrorAction SilentlyContinue
 }
 # Exit immediately to allow the calling batch script to continue
+
 exit
