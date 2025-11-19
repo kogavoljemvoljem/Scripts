@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Preset isAutoSaved="false" xmlns="urn:schemas-nliteos-com:pn.v1">
-	<Date>11/18/2025 23:22:55</Date>
+	<Date>11/19/2025 23:14:26</Date>
 	<AppInfo>
 		<Version>2025.11.10675</Version>
 		<Licensed>Yes</Licensed>
@@ -9,9 +9,10 @@
 	</AppInfo>
 	<ImageInfo>
 		<Version mode="offline">Windows 11 Professional 24H2 x64 - 10.0.26100.1 (en-US)</Version>
-		<GUID>{9E1873E0-9E92-4D54-B885-FDD970B4BB4C}</GUID>
+		<GUID>{544C074F-F21F-47A6-ACB4-8369F5E13CD9}</GUID>
 	</ImageInfo>
 	<RemoveComponents AppRemovalMode="DISM">
+		<c>1527c705-839a-4832-9118-54d4bd6a0c89 'File Picker'</c>
 		<c>aarsvc 'Agent Activation Runtime'</c>
 		<c>accessibility 'Accessibility tools (Ease of Access)'</c>
 		<c>accessibility_cursors 'Mouse Pointers (Accessibility tools)'</c>
@@ -47,8 +48,11 @@
 		<c>biometricservice 'Biometric - Service'</c>
 		<c>bootmanagerpcat 'Boot Manager (PCAT)'</c>
 		<c>branchcacheclient 'BranchCache Client'</c>
+		<c>c5e2524a-ea46-4f67-841f-6a9465d9d515 'File Explorer (Legacy)'</c>
+		<c>calculator</c>
 		<c>captureservice 'Capture Service'</c>
 		<c>cdosys 'Collaboration Data Objects for Windows (CDOSYS)'</c>
+		<c>ceip 'CEIP (SQM)'</c>
 		<c>cellulartime 'Cellular Time'</c>
 		<c>certmgr32 'Certificate Manager - 32 bit'</c>
 		<c>certutil32 'Certificate Tools - 32 bit'</c>
@@ -96,43 +100,105 @@
 		<c>displayswitch 'Display Switch'</c>
 		<c>dnsclient32 'DNS Client - 32 bit'</c>
 		<c>dolbyatmos 'Dolby Atmos codec pack'</c>
+		<c>driver_b57nd60a.inf</c>
 		<c>driver_c_barcodescanner.inf</c>
 		<c>driver_c_cashdrawer.inf</c>
+		<c>driver_c_fdc.inf</c>
+		<c>driver_c_floppydisk.inf</c>
+		<c>driver_c_fscontinuousbackup.inf</c>
+		<c>driver_c_fsopenfilebackup.inf</c>
 		<c>driver_c_linedisplay.inf</c>
 		<c>driver_c_magneticstripereader.inf</c>
 		<c>driver_c_receiptprinter.inf</c>
 		<c>driver_cht4vx64.inf</c>
+		<c>driver_e2xw10x64.inf</c>
+		<c>driver_fdc.inf</c>
+		<c>driver_flpydisk.inf</c>
+		<c>driver_hiddigi.inf</c>
 		<c>driver_hidscanner.inf</c>
 		<c>driver_hidtelephonydriver.inf</c>
 		<c>driver_idtsec.inf</c>
+		<c>driver_ipoib6x.inf</c>
 		<c>driver_iscsi.inf</c>
 		<c>driver_mgtdyn.inf</c>
+		<c>driver_mlx4_bus.inf</c>
+		<c>driver_msux64w10.inf</c>
+		<c>driver_net44amd.inf</c>
+		<c>driver_net7500-x64-n650f.inf</c>
+		<c>driver_net7800-x64-n650f.inf</c>
+		<c>driver_net9500-x64-n650f.inf</c>
+		<c>driver_netax88179_178a.inf</c>
+		<c>driver_netax88772.inf</c>
+		<c>driver_netbvbda.inf</c>
+		<c>driver_netbxnda.inf</c>
+		<c>driver_netelx.inf</c>
+		<c>driver_netevbd0a.inf</c>
+		<c>driver_netevbda.inf</c>
+		<c>driver_netjme.inf</c>
+		<c>driver_netk57a.inf</c>
+		<c>driver_netl160a.inf</c>
+		<c>driver_netl1c63x64.inf</c>
+		<c>driver_netl1e64.inf</c>
+		<c>driver_netl260a.inf</c>
+		<c>driver_netmlx4eth63.inf</c>
+		<c>driver_netmlx5.inf</c>
+		<c>driver_netmyk64.inf</c>
+		<c>driver_nett4x64.inf</c>
+		<c>driver_nulhpopr.inf</c>
+		<c>driver_nulhprs8.inf</c>
+		<c>driver_oposdrv.inf</c>
+		<c>driver_rdcameradriver.inf</c>
+		<c>driver_rdlsbuscbs.inf</c>
 		<c>driver_rdpbus.inf</c>
 		<c>driver_remoteposdrv.inf</c>
+		<c>driver_spaceport.inf</c>
 		<c>driver_termbus.inf</c>
 		<c>driver_termkbd.inf</c>
 		<c>driver_termmou.inf</c>
 		<c>driver_ts_generic.inf</c>
 		<c>driver_tsgenericusbdriver.inf</c>
 		<c>driver_tsprint.inf</c>
+		<c>driver_tsusbhub.inf</c>
 		<c>driver_tsusbhubfilter.inf</c>
+		<c>driver_wdmvsc.inf</c>
+		<c>driver_wfcvsc.inf</c>
+		<c>driver_wgencounter.inf</c>
+		<c>driver_whvcrash.inf</c>
+		<c>driver_whyperkbd.inf</c>
+		<c>driver_wnetvsc.inf</c>
+		<c>driver_ws3cap.inf</c>
+		<c>driver_wstorvsc.inf</c>
+		<c>driver_wvid.inf</c>
+		<c>driver_wvmbus.inf</c>
+		<c>driver_wvmbushid.inf</c>
+		<c>driver_wvmbusvideo.inf</c>
+		<c>driver_wvmic_heartbeat.inf</c>
+		<c>driver_wvmic_kvpexchange.inf</c>
+		<c>driver_wvmic_shutdown.inf</c>
+		<c>driver_wvmic_timesync.inf</c>
+		<c>driver_wvpci.inf</c>
+		<c>driver_ykinx64.inf</c>
 		<c>driververifier 'Driver Verifier Manager (verifier.exe)'</c>
 		<c>driververifier32 'Driver Verifier Manager (verifier.exe) - 32 bit'</c>
 		<c>dvdplay 'DVD Play'</c>
 		<c>dynamiclighting 'Dynamic Lighting'</c>
+		<c>e2a4f912-2574-4a75-9bb0-0d023378592b 'App Resolver'</c>
 		<c>easeofaccessthemes 'Ease Of Access Themes'</c>
 		<c>edgehtml32 'HTML Viewer - 32 bit'</c>
+		<c>edgewebviewlegacy 'WebView2 Runtime (Legacy)'</c>
 		<c>edit</c>
 		<c>editiontransmogrifier 'Edition change support'</c>
 		<c>editiontransmogrifier32 'Edition change support - 32 bit'</c>
 		<c>efsfeature 'Encrypting File System (EFS) - Feature'</c>
 		<c>embeddedexperience 'Device Lockdown (Embedded Experience)'</c>
+		<c>embeddedmode 'Embedded Mode'</c>
 		<c>encprovider 'Windows Encryption Provider Host Service'</c>
 		<c>enhancedstorage 'Enhanced Storage'</c>
 		<c>entappsvc 'Enterprise App Management Service'</c>
 		<c>enterpriseclientsync 'Work Folders Client'</c>
 		<c>enterprisedataprotection 'Enterprise Data Protection (EDP/WIP)'</c>
 		<c>enttempctrl 'Enterprise Feature Control'</c>
+		<c>errorreporting 'Windows Error Reporting'</c>
 		<c>esentutil 'Extensible Storage Engine - Utilities'</c>
 		<c>esentutil32 'Extensible Storage Engine - Utilities - 32 bit'</c>
 		<c>eudcedit 'Private Character Editor'</c>
@@ -140,6 +206,7 @@
 		<c>eventviewer32 'Event Viewer - 32 bit'</c>
 		<c>exchangeactivesync 'Exchange ActiveSync (EAS)'</c>
 		<c>explorer32 'File Explorer - 32 bit'</c>
+		<c>f46d4000-fd22-4db4-ac8e-4e1ddde828fe 'Add Folder Suggestions dialog'</c>
 		<c>facerecognition 'Face Recognition'</c>
 		<c>fciclient 'File Server Resource Manager'</c>
 		<c>fclip 'Client License Platform - Flexible (fclip)'</c>
