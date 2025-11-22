@@ -1,8 +1,7 @@
 ﻿<#
 .SYNOPSIS
     Ultimate Windows ISO Debloater – Fully interactive version
-    Asks user for both ISO and NTLite XML preset
-    Merges best of Stripper.ps1 + Stripper2.ps1 + your real Gorstak preset
+    Author: Gorstak
 #>
 
 #Requires -RunAsAdministrator
@@ -198,4 +197,5 @@ Write-Host "Creating final bootable ISO..." -ForegroundColor Cyan
 
 Write-Host "`nSUCCESS! Your debloated Windows ISO is ready:" -ForegroundColor Green
 Write-Host $outputIso -ForegroundColor Yellow
+
 Write-Host "`nAlways test in a virtual machine first!" -ForegroundColor Red
