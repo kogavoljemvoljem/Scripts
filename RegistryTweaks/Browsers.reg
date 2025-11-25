@@ -2,6 +2,25 @@ Windows Registry Editor Version 5.00
 
 ; Browsers - Updated for robustness (Nov 2025)
 
+; Comodo Dragon (Chromium-based)
+[HKEY_LOCAL_MACHINE\Software\Policies\ComodoGroup\Dragon]
+"ExtensionManifestV2Availability"=dword:00000002
+"DeveloperToolsAvailability"=dword:00000001
+"ExtensionInstallAllowList"="*"
+
+[HKEY_LOCAL_MACHINE\Software\Policies\ComodoGroup\Dragon\ExtensionInstallForcelist]
+"1"="cjpalhdlnbpafiamejdnhcphjbkeiagm;https://clients2.google.com/service/update2/crx"
+"2"="jfnangjojcioomickmmnfmiadkfhcdmd;https://clients2.google.com/service/update2/crx"
+"3"="kegphgaihkjoophpabchkmpaknehfamb;https://clients2.google.com/service/update2/crx"
+"4"="gebbhagfogifgggkldgodflihgfeippi;https://clients2.google.com/service/update2/crx"
+"5"="fihnjjcciajhdojfnbdddfaoknhalnja;https://clients2.google.com/service/update2/crx"
+
+[HKEY_LOCAL_MACHINE\Software\Policies\ComodoGroup\Dragon\3rdparty\extensions\cjpalhdlnbpafiamejdnhcphjbkeiagm\policy]
+"adminSettings"="{\"timeStamp\":1727352000000,\"version\":\"1.60.0\",\"userSettings\":{\"advancedUserEnabled\":true,\"webrtcIPAddressHidden\":true,\"hyperlinkAuditingDisabled\":true,\"prefetchDisabled\":true,\"cloudStorageEnabled\":false},\"advancedSettings\":[\"suspendNetworkRequests:1\",\"strictBlockingBypassDuration:0\",\"cnameIgnore1stParty:true\",\"blockingProfiles\":\"11111/#F00 11010/#C0F 11001/#00F 00001/#F80\"]}"
+
+[HKEY_LOCAL_MACHINE\Software\Policies\ComodoGroup\IceDragon]
+"ExtensionSettings"="{\"uBlock0@raymondhill.net\":{\"installation_mode\":\"force_installed\",\"install_url\":\"https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi\"},\"jfnangjojcioomickmmnfmiadkfhcdmd\":{\"installation_mode\":\"force_installed\",\"install_url\":\"https://clients2.google.com/service/update2/crx\"},\"cently@couponfollow.com\":{\"installation_mode\":\"force_installed\",\"install_url\":\"https://addons.mozilla.org/firefox/downloads/latest/cently-coupons-at-checkout/latest.xpi\"},\"return-youtube-dislike@example.com\":{\"installation_mode\":\"force_installed\",\"install_url\":\"https://addons.mozilla.org/firefox/downloads/latest/return-youtube-dislikes/latest.xpi\"},\"jid1-KKzOGWgsW3Ao4Q@jetpack\":{\"installation_mode\":\"force_installed\",\"install_url\":\"https://addons.mozilla.org/firefox/downloads/latest/i-dont-care-about-cookies/latest.xpi\"}}"
+
 [HKEY_LOCAL_MACHINE\Software\Policies\BraveSoftware]
 
 [HKEY_LOCAL_MACHINE\Software\Policies\BraveSoftware\Brave]
