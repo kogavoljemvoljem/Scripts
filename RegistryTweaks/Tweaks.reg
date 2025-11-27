@@ -31,6 +31,7 @@ Windows Registry Editor Version 5.00
 "MitigationOptions"=dword:00000031
 
 [HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows NT\Terminal Services]
+"fAllowFullControl"=dword:00000000
 "fSingleSessionPerUser"=dword:00000001
 "fEnableSmartCard"=dword:00000000
 "AllowBasic"=dword:00000000
@@ -65,6 +66,7 @@ Windows Registry Editor Version 5.00
 "RemoteRegAccess"=dword:00000000
 
 [HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Terminal Server]
+"fAllowFullControl"=dword:00000000
 "fSingleSessionPerUser"=dword:00000001
 "fEnableSmartCard"=dword:00000000
 "AllowBasic"=dword:00000000
