@@ -49,6 +49,147 @@ $powershellWhitelist = @(
     "system.management.automation.dll"
 ) | ForEach-Object { $_.ToLower() }
 
+$rainmeterWhitelist = @(
+    "rainmeter.exe",
+    "rainmeter.dll",
+    "lua51.dll",
+    "lua53.dll",
+    "audiolevel.dll",
+    "nowplaying.dll",
+    "webparser.dll",
+    "win7audio.dll",
+    "recycle.dll",
+    "speedfan.dll",
+    "perfmon.dll",
+    "power.dll",
+    "sysinfo.dll",
+    "windowmessage.dll",
+    "itunes.dll",
+    "mediakey.dll",
+    "advancedcpu.dll",
+    "coretemp.dll",
+    "folderinfo.dll",
+    "inputtext.dll",
+    "ping.dll",
+    "process.dll",
+    "quote.dll",
+    "runcommand.dll",
+    "speedtest.dll",
+    "usagemonitor.dll",
+    "wifi.dll"
+) | ForEach-Object { $_.ToLower() }
+
+$mlwappWhitelist = @(
+    "mlwapp.exe"
+) | ForEach-Object { $_.ToLower() }
+
+$wallpaperEngineWhitelist = @(
+    "wallpaper32.exe",
+    "wallpaper64.exe",
+    "wallpaperservice32.exe",
+    "wallpaperservice64.exe",
+    "ui32.exe",
+    "libcef.dll",
+    "libglesv2.dll",
+    "libegl.dll",
+    "d3dcompiler_47.dll",
+    "chrome_elf.dll",
+    "widevinecdmadapter.dll",
+    "icudtl.dat"
+) | ForEach-Object { $_.ToLower() }
+
+# NVIDIA Control Panel whitelist
+$nvidiaWhitelist = @(
+    "nvcplui.exe",
+    "nvcpl.dll",
+    "nvapi64.dll",
+    "nvapi.dll",
+    "nvshext.dll",
+    "nvcuda.dll",
+    "nvopencl.dll",
+    "nvd3dum.dll",
+    "nvwgf2um.dll",
+    "nvoglv64.dll",
+    "nvoglv32.dll",
+    "nvumdshim.dll",
+    "nvfatbinaryloader.dll"
+) | ForEach-Object { $_.ToLower() }
+
+# AMD Radeon Software whitelist
+$amdWhitelist = @(
+    "radeonpanel.exe",
+    "radeonpanel.dll",
+    "radeonpanel.host.exe",
+    "amdrsserv.exe",
+    "amdow.exe",
+    "amddvr.exe",
+    "atiadlxx.dll",
+    "atiadlxy.dll",
+    "aticfx64.dll",
+    "aticfx32.dll",
+    "atioglxx.dll",
+    "atio6axx.dll",
+    "amdmantle64.dll",
+    "amdvlk64.dll",
+    "amdihk64.dll",
+    "amdhcp64.dll",
+    "amdfendrsr.dll"
+) | ForEach-Object { $_.ToLower() }
+
+# Intel Graphics and Management Engine whitelist
+$intelWhitelist = @(
+    "igfxem.exe",
+    "igfxtray.exe",
+    "igfxpers.exe",
+    "igfxcuiservice.exe",
+    "igfxext.exe",
+    "igfx11cmrt64.dll",
+    "igfxdo.dll",
+    "igfxdv32.dll",
+    "igdumdim64.dll",
+    "igd10iumd64.dll",
+    "igdrcl64.dll",
+    "intelocl64.dll",
+    "hccutils.dll",
+    "lmcore.dll",
+    "imecr.dll"
+) | ForEach-Object { $_.ToLower() }
+
+# Realtek Audio whitelist
+$realtekWhitelist = @(
+    "rthdvcpl.exe",
+    "rtkauduservice64.exe",
+    "rtkngui64.exe",
+    "rtkhdasservice.exe",
+    "rtkaudioservice64.exe",
+    "rtkapi64.dll",
+    "rtkcolaudiominiport.dll",
+    "rtkcoinstii.dll",
+    "rtlcpapi.dll",
+    "rtpcee64.dll",
+    "maximumaudioeffect.dll",
+    "voicemeeter.dll",
+    "wrapapo.dll"
+) | ForEach-Object { $_.ToLower() }
+
+# Dolby Atmos whitelist
+$dolbyWhitelist = @(
+    "dolbydax2api.exe",
+    "dax3api.exe",
+    "dax3_api_proxy.exe",
+    "dolbydax2trayicon.exe",
+    "dolbyaposvc.exe",
+    "dax2_api.dll",
+    "dax3_api.dll",
+    "dolbyapo2.dll",
+    "dolbyaposvc64.dll",
+    "dolbyapomgr64.dll",
+    "dax2audioapo.dll",
+    "dax3_api_proxy.dll",
+    "dlbapo64.dll",
+    "dolbyapo100.dll"
+) | ForEach-Object { $_.ToLower() }
+
 # === LOGGING ===
 function Write-Log {
     param([string]$message)
@@ -135,6 +276,222 @@ function Test-IsNotepadFile {
             return $true
         }
     }
+    return $false
+}
+
+# === RAINMETER EXCEPTION ===
+function Test-IsRainmeterFile {
+    param([string]$fullPath, [string]$processName)
+    
+    # If the process loading it is rainmeter, check whitelist
+    if ($processName -eq "rainmeter") {
+        $fileName = (Split-Path $fullPath -Leaf).ToLower()
+        if ($rainmeterWhitelist -contains $fileName) {
+            Write-Log "RAINMETER EXCEPTION: Allowing $fullPath for Rainmeter"
+            return $true
+        }
+    }
+    
+    # Allow any DLL from Rainmeter directory (skins/plugins)
+    $pathLower = $fullPath.ToLower()
+    if ($pathLower -match "\\rainmeter\\") {
+        Write-Log "RAINMETER EXCEPTION: Allowing Rainmeter directory file $fullPath"
+        return $true
+    }
+    
+    return $false
+}
+
+# === MLWAPP EXCEPTION ===
+function Test-IsMLWAppFile {
+    param([string]$fullPath, [string]$processName)
+    
+    # If the process loading it is mlwapp
+    if ($processName -eq "mlwapp") {
+        Write-Log "MLWAPP EXCEPTION: Allowing $fullPath for MLWApp"
+        return $true
+    }
+    
+    # Allow any DLL from MLWApp directory
+    $pathLower = $fullPath.ToLower()
+    if ($pathLower -match "\\mlwapp\\") {
+        Write-Log "MLWAPP EXCEPTION: Allowing MLWApp directory file $fullPath"
+        return $true
+    }
+    
+    return $false
+}
+
+# === WALLPAPER ENGINE EXCEPTION ===
+function Test-IsWallpaperEngineFile {
+    param([string]$fullPath, [string]$processName)
+    
+    # If the process loading it is wallpaper engine
+    if ($processName -match "wallpaper32|wallpaper64|wallpaperservice|ui32") {
+        $fileName = (Split-Path $fullPath -Leaf).ToLower()
+        if ($wallpaperEngineWhitelist -contains $fileName) {
+            Write-Log "WALLPAPER ENGINE EXCEPTION: Allowing $fullPath for Wallpaper Engine"
+            return $true
+        }
+    }
+    
+    # Allow any DLL from Wallpaper Engine directory
+    $pathLower = $fullPath.ToLower()
+    if ($pathLower -match "\\wallpaper engine\\") {
+        Write-Log "WALLPAPER ENGINE EXCEPTION: Allowing Wallpaper Engine directory file $fullPath"
+        return $true
+    }
+    
+    return $false
+}
+
+# === NVIDIA CONTROL PANEL EXCEPTION ===
+function Test-IsNvidiaFile {
+    param([string]$fullPath, [string]$processName)
+    
+    # If the process loading it is nvidia-related
+    if ($processName -match "nvcpl|nvidia") {
+        $fileName = (Split-Path $fullPath -Leaf).ToLower()
+        if ($nvidiaWhitelist -contains $fileName) {
+            Write-Log "NVIDIA EXCEPTION: Allowing $fullPath for NVIDIA"
+            return $true
+        }
+    }
+    
+    # Allow any DLL from NVIDIA directory
+    $pathLower = $fullPath.ToLower()
+    if ($pathLower -match "\\nvidia\\|\\nvidiagames\\|\\nvidia corporation\\") {
+        Write-Log "NVIDIA EXCEPTION: Allowing NVIDIA directory file $fullPath"
+        return $true
+    }
+    
+    # Allow files in System32 if they match nvidia whitelist
+    $fileName = (Split-Path $fullPath -Leaf).ToLower()
+    if ($nvidiaWhitelist -contains $fileName) {
+        Write-Log "NVIDIA EXCEPTION: Allowing whitelisted file $fullPath"
+        return $true
+    }
+    
+    return $false
+}
+
+# === AMD RADEON EXCEPTION ===
+function Test-IsAMDFile {
+    param([string]$fullPath, [string]$processName)
+    
+    # If the process loading it is AMD-related
+    if ($processName -match "radeon|amd|ati") {
+        $fileName = (Split-Path $fullPath -Leaf).ToLower()
+        if ($amdWhitelist -contains $fileName) {
+            Write-Log "AMD EXCEPTION: Allowing $fullPath for AMD"
+            return $true
+        }
+    }
+    
+    # Allow any DLL from AMD directory
+    $pathLower = $fullPath.ToLower()
+    if ($pathLower -match "\\amd\\|\\ati technologies\\|\\advanced micro devices\\") {
+        Write-Log "AMD EXCEPTION: Allowing AMD directory file $fullPath"
+        return $true
+    }
+    
+    # Allow files in System32 if they match AMD whitelist
+    $fileName = (Split-Path $fullPath -Leaf).ToLower()
+    if ($amdWhitelist -contains $fileName) {
+        Write-Log "AMD EXCEPTION: Allowing whitelisted file $fullPath"
+        return $true
+    }
+    
+    return $false
+}
+
+# === INTEL EXCEPTION ===
+function Test-IsIntelFile {
+    param([string]$fullPath, [string]$processName)
+    
+    # If the process loading it is Intel-related
+    if ($processName -match "igfx|intel") {
+        $fileName = (Split-Path $fullPath -Leaf).ToLower()
+        if ($intelWhitelist -contains $fileName) {
+            Write-Log "INTEL EXCEPTION: Allowing $fullPath for Intel"
+            return $true
+        }
+    }
+    
+    # Allow any DLL from Intel directory
+    $pathLower = $fullPath.ToLower()
+    if ($pathLower -match "\\intel\\|\\intel corporation\\") {
+        Write-Log "INTEL EXCEPTION: Allowing Intel directory file $fullPath"
+        return $true
+    }
+    
+    # Allow files in System32 if they match Intel whitelist
+    $fileName = (Split-Path $fullPath -Leaf).ToLower()
+    if ($intelWhitelist -contains $fileName) {
+        Write-Log "INTEL EXCEPTION: Allowing whitelisted file $fullPath"
+        return $true
+    }
+    
+    return $false
+}
+
+# === REALTEK EXCEPTION ===
+function Test-IsRealtekFile {
+    param([string]$fullPath, [string]$processName)
+    
+    # If the process loading it is Realtek-related
+    if ($processName -match "rtk|realtek") {
+        $fileName = (Split-Path $fullPath -Leaf).ToLower()
+        if ($realtekWhitelist -contains $fileName) {
+            Write-Log "REALTEK EXCEPTION: Allowing $fullPath for Realtek"
+            return $true
+        }
+    }
+    
+    # Allow any DLL from Realtek directory
+    $pathLower = $fullPath.ToLower()
+    if ($pathLower -match "\\realtek\\") {
+        Write-Log "REALTEK EXCEPTION: Allowing Realtek directory file $fullPath"
+        return $true
+    }
+    
+    # Allow files in System32 if they match Realtek whitelist
+    $fileName = (Split-Path $fullPath -Leaf).ToLower()
+    if ($realtekWhitelist -contains $fileName) {
+        Write-Log "REALTEK EXCEPTION: Allowing whitelisted file $fullPath"
+        return $true
+    }
+    
+    return $false
+}
+
+# === DOLBY ATMOS EXCEPTION ===
+function Test-IsDolbyFile {
+    param([string]$fullPath, [string]$processName)
+    
+    # If the process loading it is Dolby-related
+    if ($processName -match "dolby|dax") {
+        $fileName = (Split-Path $fullPath -Leaf).ToLower()
+        if ($dolbyWhitelist -contains $fileName) {
+            Write-Log "DOLBY EXCEPTION: Allowing $fullPath for Dolby"
+            return $true
+        }
+    }
+    
+    # Allow any DLL from Dolby directory
+    $pathLower = $fullPath.ToLower()
+    if ($pathLower -match "\\dolby\\") {
+        Write-Log "DOLBY EXCEPTION: Allowing Dolby directory file $fullPath"
+        return $true
+    }
+    
+    # Allow files in System32 if they match Dolby whitelist
+    $fileName = (Split-Path $fullPath -Leaf).ToLower()
+    if ($dolbyWhitelist -contains $fileName) {
+        Write-Log "DOLBY EXCEPTION: Allowing whitelisted file $fullPath"
+        return $true
+    }
+    
     return $false
 }
 
@@ -276,13 +633,52 @@ function Monitor-LoadedDLLs {
                         return
                     }
                     
-                    # Check PowerShell exception first (so script doesn't kill itself)
                     if (Test-IsPowerShellFile -fullPath $dllPath -processName $procName) {
                         $lastScan[$key] = $true
                         return
                     }
                     
-                    # Check ctfmon exception first
+                    if (Test-IsRainmeterFile -fullPath $dllPath -processName $procName) {
+                        $lastScan[$key] = $true
+                        return
+                    }
+                    
+                    if (Test-IsMLWAppFile -fullPath $dllPath -processName $procName) {
+                        $lastScan[$key] = $true
+                        return
+                    }
+                    
+                    if (Test-IsWallpaperEngineFile -fullPath $dllPath -processName $procName) {
+                        $lastScan[$key] = $true
+                        return
+                    }
+                    
+                    if (Test-IsNvidiaFile -fullPath $dllPath -processName $procName) {
+                        $lastScan[$key] = $true
+                        return
+                    }
+                    
+                    if (Test-IsAMDFile -fullPath $dllPath -processName $procName) {
+                        $lastScan[$key] = $true
+                        return
+                    }
+                    
+                    if (Test-IsIntelFile -fullPath $dllPath -processName $procName) {
+                        $lastScan[$key] = $true
+                        return
+                    }
+                    
+                    if (Test-IsRealtekFile -fullPath $dllPath -processName $procName) {
+                        $lastScan[$key] = $true
+                        return
+                    }
+                    
+                    if (Test-IsDolbyFile -fullPath $dllPath -processName $procName) {
+                        $lastScan[$key] = $true
+                        return
+                    }
+                    
+                    # Check ctfmon exception
                     if (Test-IsCtfmonFile -fullPath $dllPath -processName $procName) {
                         $lastScan[$key] = $true
                         return
@@ -348,8 +744,48 @@ function Watch-NewDLLs {
             
             Write-Log "NEW DLL DETECTED: $fullPath"
             
-            # Allow all .NET Native Images loaded by PowerShell
             $pathLower = $fullPath.ToLower()
+            if ($pathLower -match "\\rainmeter\\") {
+                Write-Log "RAINMETER EXCEPTION: Allowing new file $fullPath"
+                return
+            }
+            
+            if ($pathLower -match "\\mlwapp\\") {
+                Write-Log "MLWAPP EXCEPTION: Allowing new file $fullPath"
+                return
+            }
+            
+            if ($pathLower -match "\\wallpaper engine\\") {
+                Write-Log "WALLPAPER ENGINE EXCEPTION: Allowing new file $fullPath"
+                return
+            }
+            
+            if ($pathLower -match "\\nvidia\\|\\nvidiagames\\|\\nvidia corporation\\") {
+                Write-Log "NVIDIA EXCEPTION: Allowing new file $fullPath"
+                return
+            }
+            
+            if ($pathLower -match "\\amd\\|\\ati technologies\\|\\advanced micro devices\\") {
+                Write-Log "AMD EXCEPTION: Allowing new file $fullPath"
+                return
+            }
+            
+            if ($pathLower -match "\\intel\\|\\intel corporation\\") {
+                Write-Log "INTEL EXCEPTION: Allowing new file $fullPath"
+                return
+            }
+            
+            if ($pathLower -match "\\realtek\\") {
+                Write-Log "REALTEK EXCEPTION: Allowing new file $fullPath"
+                return
+            }
+            
+            if ($pathLower -match "\\dolby\\") {
+                Write-Log "DOLBY EXCEPTION: Allowing new file $fullPath"
+                return
+            }
+            
+            # Allow all .NET Native Images loaded by PowerShell
             if ($pathLower -match "\.ni\.dll$" -and $pathLower -match "\\windows\\assembly\\") {
                 Write-Log "POWERSHELL EXCEPTION: Allowing .NET Native Image $fullPath"
                 return
@@ -378,6 +814,26 @@ function Watch-NewDLLs {
                 return
             }
             
+            if (Test-IsNvidiaFile -fullPath $fullPath -processName "") {
+                return
+            }
+            
+            if (Test-IsAMDFile -fullPath $fullPath -processName "") {
+                return
+            }
+            
+            if (Test-IsIntelFile -fullPath $fullPath -processName "") {
+                return
+            }
+            
+            if (Test-IsRealtekFile -fullPath $fullPath -processName "") {
+                return
+            }
+            
+            if (Test-IsDolbyFile -fullPath $fullPath -processName "") {
+                return
+            }
+            
             Start-Sleep -Milliseconds 500  # Let file finish writing
             
             $analysis = Get-DLLThreatScore -filePath $fullPath
@@ -401,6 +857,11 @@ Write-Host "  ctfmon.exe: Whitelisted to prevent popups" -ForegroundColor Cyan
 Write-Host "  explorer.exe: Whitelisted for context menus" -ForegroundColor Cyan
 Write-Host "  notepad.exe: Whitelisted for file menus" -ForegroundColor Cyan
 Write-Host "  powershell.exe: Whitelisted (script protection)" -ForegroundColor Cyan
+Write-Host "  Rainmeter: Whitelisted (skins & plugins)" -ForegroundColor Cyan
+Write-Host "  Wallpaper Engine: Whitelisted" -ForegroundColor Cyan
+Write-Host "  MLWApp: Whitelisted" -ForegroundColor Cyan
+Write-Host "  NVIDIA/AMD/Intel: Whitelisted (drivers)" -ForegroundColor Cyan
+Write-Host "  Realtek/Dolby: Whitelisted (audio)" -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Green
 
 Write-Log "DLL Injection Monitor started"

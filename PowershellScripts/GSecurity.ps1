@@ -347,7 +347,17 @@ function Stop-MaliciousProcess {
     # Placeholder - implement if needed
 }
 
+Write-Host "============================================" -ForegroundColor Red
+Write-Host "WARNING: GSecurity is a powerful tool" -ForegroundColor Red
+Write-Host "It can cause system instability if misconfigured" -ForegroundColor Red
+Write-Host "This SAFE version will monitor but be less aggressive" -ForegroundColor Yellow
+Write-Host "============================================" -ForegroundColor Red
+Write-Host ""
+Write-Host "Press Ctrl+C to exit at any time" -ForegroundColor Green
+Write-Host ""
+
 # Main loop
+Write-Host "GSecurity started. Monitoring for threats..." -ForegroundColor Green
 while ($true) {
     Start-ProcessKiller
     Kill-Connections
